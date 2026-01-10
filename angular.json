@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "Absence": {
+    "Absence.UI": {
       "projectType": "application",
       "schematics": {},
       "root": "",
@@ -13,7 +13,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": "dist/absence",
+            "outputPath": "dist/absence.ui",
             "index": "src/index.html",
             "browser": "src/main.ts",
             "polyfills": ["zone.js"],
@@ -66,10 +66,10 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "Absence:build:production"
+              "buildTarget": "Absence.UI:build:production"
             },
             "development": {
-              "buildTarget": "Absence:build:development"
+              "buildTarget": "Absence.UI:build:development"
             }
           },
           "defaultConfiguration": "development"
