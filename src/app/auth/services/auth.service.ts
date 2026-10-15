@@ -3,12 +3,12 @@ import { inject, Injectable, signal } from '@angular/core';
 import {
   catchError,
   EMPTY,
+  finalize,
   map,
   Observable,
   of,
   switchMap,
   tap,
-  throwError,
 } from 'rxjs';
 import {
   AuthResponse,
@@ -43,11 +43,13 @@ export class AuthService {
     }
 
     return this.#loadUserDetails().pipe(
-      tap(() => this.initialized.set(true)),
-      catchError((e) => {
-        console.error(e);
-        return throwError(() => e);
-      })
+      catchError((error: HttpErrorResponse) => {
+        console.error(error);
+        this.logoutLocally();
+        navigateToErrorPage(this.#router, error);
+        return EMPTY;
+      }),
+      finalize(() => this.initialized.set(true))
     );
   }
 
