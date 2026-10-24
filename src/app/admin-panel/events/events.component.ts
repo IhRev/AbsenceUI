@@ -1,6 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { EventTypesService } from '../services/event-types.service';
-import { Event } from '../models/events.models';
+import { absenceEventTypeNames, Event } from '../models/events.models';
 import { EventsService } from '../services/events.service';
 import { DatePipe } from '@angular/common';
 import { AbsenceTypeService } from '../../absences/services/absence-type.service';
@@ -14,7 +13,6 @@ import { AbsenceTypeService } from '../../absences/services/absence-type.service
 })
 export class EventsComponent implements OnInit {
   #num = 0;
-  readonly #typesService = inject(EventTypesService);
   readonly #eventsService = inject(EventsService);
   readonly #absenceTypeService = inject(AbsenceTypeService);
 
@@ -60,9 +58,7 @@ export class EventsComponent implements OnInit {
                     (t) => t.id === e.absenceType
                   )!.name,
                   e.user,
-                  this.#typesService.types!.find(
-                    (t) => t.id === e.absenceEventType
-                  )!.name
+                  absenceEventTypeNames[e.absenceEventType] ?? 'Unknown'
                 )
             )
           );

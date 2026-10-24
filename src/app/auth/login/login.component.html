@@ -17,7 +17,9 @@
         required
         minlength="6"
       />
-      @if ((form.submitted && form.invalid) || errorMsg()) {
+      @if (errorMsg()) {
+      <p class="error-msg">{{ errorMsg() }}</p>
+      } @else if (form.submitted && form.invalid) {
       <p class="error-msg">Incorrect password or email</p>
       }
     </div>

@@ -1,6 +1,5 @@
 import { Component, inject, OnInit, output, signal } from '@angular/core';
 import { AuthService } from '../../services/auth.service';
-import { UserDetails } from '../../models/auth.models';
 import {
   FormControl,
   FormGroup,
@@ -45,14 +44,7 @@ export class UserGeneralTabComponent implements OnInit {
 
     this.isProcessing.set(true);
     this.#authService
-      .updateUserDetails(
-        new UserDetails(
-          this.#authService.userDetails()!.id,
-          this.form.value.firstName!,
-          this.form.value.lastName!,
-          this.form.value.email!
-        )
-      )
+      .updateUserDetails(this.form.value.firstName!, this.form.value.lastName!)
       .subscribe({
         next: (res) => {
           this.#displayMsg(res.isSuccess, res.message);

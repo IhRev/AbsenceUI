@@ -1,14 +1,16 @@
 export class Result {
   public readonly isSuccess: boolean;
   public readonly message: string;
+  public readonly queued: boolean;
 
-  private constructor(isSuccess: boolean, message: string) {
+  private constructor(isSuccess: boolean, message: string, queued = false) {
     this.isSuccess = isSuccess;
     this.message = message;
+    this.queued = queued;
   }
 
-  public static success(message?: string): Result {
-    return new Result(true, message ?? 'Success');
+  public static success(message?: string, queued = false): Result {
+    return new Result(true, message ?? 'Success', queued);
   }
 
   public static fail(message?: string): Result {

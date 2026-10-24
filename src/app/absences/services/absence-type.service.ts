@@ -1,25 +1,39 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { AbsenceTypeDTO } from '../models/absence.models';
 import { environment } from '../../../environments/environment';
-import { catchError, Observable, tap, throwError } from 'rxjs';
+import { catchError, Observable, of, tap } from 'rxjs';
+import { Router } from '@angular/router';
+import { navigateToErrorPage } from '../../common/services/error-utilities';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AbsenceTypeService {
   readonly #client = inject(HttpClient);
+  readonly #router = inject(Router);
 
   types: AbsenceTypeDTO[] | null = null;
 
-  load(): Observable<any> {
+  load(organizationId: number): Observable<AbsenceTypeDTO[]> {
     return this.#client
-      .get<AbsenceTypeDTO[]>(`${environment.apiUrl}/absences/types`)
+      .get<AbsenceTypeDTO[]>(
+        `${environment.apiUrl}/organizations/${organizationId}/absences/types`
+      )
       .pipe(
         tap((res) => (this.types = res)),
-        catchError((e) => {
-          console.error(e);
-          return throwError(() => e);
+        catchError((error: HttpErrorResponse) => {
+          console.error(error);
+          this.types = null;
+          if (
+            error.status !== 400 &&
+            error.status !== 401 &&
+            error.status !== 403 &&
+            error.status !== 404
+          ) {
+            navigateToErrorPage(this.#router, error);
+          }
+          return of([]);
         })
       );
   }

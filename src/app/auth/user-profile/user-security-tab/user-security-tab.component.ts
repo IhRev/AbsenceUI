@@ -34,7 +34,7 @@ export class UserSecurityTabComponent {
       validators: [Validators.required, Validators.minLength(6)],
     }),
     newPassword: new FormControl('', {
-      validators: [Validators.required, Validators.minLength(6)],
+      validators: [Validators.required, Validators.minLength(8)],
     }),
   });
   isProcessing = signal(false);

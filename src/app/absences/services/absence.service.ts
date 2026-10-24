@@ -12,7 +12,7 @@ import {
 import { catchError, map, Observable, of } from 'rxjs';
 import { DataResult, Result } from '../../common/models/result.models';
 import { Router } from '@angular/router';
-import { navigateToErrorPage } from '../../common/services/error-utilities';
+import { toApiFailure } from '../../common/services/error-utilities';
 import { environment } from '../../../environments/environment';
 import { DateHelper } from '../../common/helpers/date-helper';
 import { OrganizationsService } from '../../organizations/services/organizations.service';
@@ -29,28 +29,7 @@ export class AbsenceService {
     startDate: Date,
     endDate: Date
   ): Observable<DataResult<AbsenceDTO[]>> {
-    return this.#client
-      .get<AbsenceDTO[]>(
-        `${environment.apiUrl}/organizations/${
-          this.#organizationsService.selectedOrganization()!.id
-        }/absences`,
-        {
-          params: new HttpParams()
-            .set('startDate', DateHelper.getDateOnlyString(startDate))
-            .set('endDate', DateHelper.getDateOnlyString(endDate)),
-        }
-      )
-      .pipe(
-        map((res: AbsenceDTO[]) => DataResult.success<AbsenceDTO[]>(res)),
-        catchError((error: HttpErrorResponse) => {
-          console.error(error);
-          if (error.status === 400) {
-            return of(DataResult.fail<AbsenceDTO[]>(error.error));
-          }
-          navigateToErrorPage(this.#router, error);
-          return of(DataResult.fail<AbsenceDTO[]>());
-        })
-      );
+    return this.#getAbsences(startDate, endDate);
   }
 
   getAbsencesBySelectedUsers(
@@ -58,83 +37,124 @@ export class AbsenceService {
     endDate: Date,
     usersIds: number[]
   ): Observable<DataResult<AbsenceDTO[]>> {
-    return this.#client
-      .post<AbsenceDTO[]>(
-        `${environment.apiUrl}/organizations/${
-          this.#organizationsService.selectedOrganization()!.id
-        }/absences`,
-        usersIds,
-        {
-          params: new HttpParams()
-            .set('startDate', DateHelper.getDateOnlyString(startDate))
-            .set('endDate', DateHelper.getDateOnlyString(endDate)),
-        }
-      )
-      .pipe(
-        map((res: AbsenceDTO[]) => DataResult.success<AbsenceDTO[]>(res)),
-        catchError((error: HttpErrorResponse) => {
-          console.error(error);
-          if (error.status === 400) {
-            return of(DataResult.fail<AbsenceDTO[]>(error.error));
-          }
-          navigateToErrorPage(this.#router, error);
-          return of(DataResult.fail<AbsenceDTO[]>());
-        })
-      );
+    if (usersIds.length === 0) {
+      return of(DataResult.success<AbsenceDTO[]>([]));
+    }
+    return this.#getAbsences(startDate, endDate, usersIds);
   }
 
   addAbsence(absence: CreateAbsenceDTO): Observable<DataResult<number | null>> {
     return this.#client
-      .post<any>(`${environment.apiUrl}/absences`, absence)
+      .post<number>(`${environment.apiUrl}/absences`, absence, {
+        observe: 'response',
+      })
       .pipe(
-        map((res) =>
-          typeof res === 'number'
-            ? DataResult.success<number | null>(
-                res,
-                'Absence added successfully'
-              )
-            : DataResult.success<number | null>(null, res.message)
-        ),
-        catchError((error: HttpErrorResponse) => {
-          console.error(error);
-          if (error.status === 400) {
-            return of(DataResult.fail<number | null>(error.error));
+        map((res) => {
+          if (res.status === 202) {
+            return DataResult.success<number | null>(
+              null,
+              'Absence submitted for approval'
+            );
           }
-          navigateToErrorPage(this.#router, error);
-          return of(DataResult.fail<number | null>());
-        })
+          return DataResult.success<number | null>(
+            res.body,
+            'Absence added successfully'
+          );
+        }),
+        catchError((error: HttpErrorResponse) =>
+          of(
+            toApiFailure(
+              this.#router,
+              error,
+              (message) => DataResult.fail<number | null>(message),
+              { notFound: 'You are not a member of this organization.' }
+            )
+          )
+        )
       );
   }
 
   editAbsence(absence: EditAbsenceDTO): Observable<Result> {
     return this.#client
-      .put<{ message: string }>(`${environment.apiUrl}/absences`, absence)
+      .put(`${environment.apiUrl}/absences`, absence, { observe: 'response' })
       .pipe(
-        map((res) => Result.success(res.message)),
-        catchError((error: HttpErrorResponse) => {
-          console.error(error);
-          if (error.status === 400) {
-            return of(Result.fail(error.error));
-          }
-          navigateToErrorPage(this.#router, error);
-          return of(Result.fail());
-        })
+        map((res) =>
+          Result.success(
+            res.status === 202
+              ? 'Change submitted for approval'
+              : 'Absence updated successfully',
+            res.status === 202
+          )
+        ),
+        catchError((error: HttpErrorResponse) =>
+          of(
+            toApiFailure(this.#router, error, (message) => Result.fail(message), {
+              forbidden: 'You can only edit your own absence.',
+              notFound: 'Absence was not found.',
+            })
+          )
+        )
       );
   }
 
   deleteAbsence(id: number): Observable<Result> {
     return this.#client
-      .delete<{ message: string }>(`${environment.apiUrl}/absences/${id}`)
+      .delete(`${environment.apiUrl}/absences/${id}`, { observe: 'response' })
       .pipe(
-        map((res) => Result.success(res.message)),
-        catchError((error: HttpErrorResponse) => {
-          console.error(error);
-          if (error.status === 400) {
-            return of(Result.fail(error.error));
-          }
-          navigateToErrorPage(this.#router, error);
-          return of(Result.fail());
-        })
+        map((res) =>
+          Result.success(
+            res.status === 202
+              ? 'Deletion submitted for approval'
+              : 'Absence deleted successfully',
+            res.status === 202
+          )
+        ),
+        catchError((error: HttpErrorResponse) =>
+          of(
+            toApiFailure(this.#router, error, (message) => Result.fail(message), {
+              forbidden: 'You can only delete your own absence.',
+              notFound: 'Absence was not found.',
+            })
+          )
+        )
+      );
+  }
+
+  #getAbsences(
+    startDate: Date,
+    endDate: Date,
+    userIds?: number[]
+  ): Observable<DataResult<AbsenceDTO[]>> {
+    const range = DateHelper.absenceQueryRange(startDate, endDate);
+    let params = new HttpParams()
+      .set('startDate', range.start)
+      .set('endDate', range.end);
+    for (const id of userIds ?? []) {
+      params = params.append('userIds', id);
+    }
+
+    return this.#client
+      .get<AbsenceDTO[]>(
+        `${environment.apiUrl}/organizations/${
+          this.#organizationsService.selectedOrganization()!.id
+        }/absences`,
+        { params }
+      )
+      .pipe(
+        map((res: AbsenceDTO[]) => DataResult.success<AbsenceDTO[]>(res)),
+        catchError((error: HttpErrorResponse) =>
+          of(
+            toApiFailure(
+              this.#router,
+              error,
+              (message) => DataResult.fail<AbsenceDTO[]>(message),
+              {
+                forbidden: 'Only an admin can load absences for other members.',
+                notFound: 'Organization was not found.',
+              }
+            )
+          )
+        )
       );
   }
 }

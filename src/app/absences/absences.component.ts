@@ -58,9 +58,10 @@ export class AbsenceListComponent implements OnInit {
         if (res.isSuccess) {
           this.members.set(res.data!);
           this.isProcessing.set(false);
-          this.#loadAbsences(
+          this.#loadAbsencesBySelectedUsers(
             DateHelper.getStartOfTheCurrentYear(),
-            DateHelper.getEndOfTheCurrentYear()
+            DateHelper.getEndOfTheCurrentYear(),
+            res.data!.map((member) => member.id)
           );
         }
       });
@@ -114,7 +115,7 @@ export class AbsenceListComponent implements OnInit {
     this.isProcessing.set(true);
     this.#absenceService.editAbsence(absence).subscribe({
       next: (result) => {
-        if (result.isSuccess) {
+        if (result.isSuccess && !result.queued) {
           this.selectedAbsence.update((a) => {
             a!.name = absence.name;
             a!.type = this.#absenceTypeService.types!.find(
@@ -137,7 +138,7 @@ export class AbsenceListComponent implements OnInit {
     this.isProcessing.set(true);
     this.#absenceService.deleteAbsence(id).subscribe({
       next: (result) => {
-        if (result.isSuccess) {
+        if (result.isSuccess && !result.queued) {
           this.absences.update((prev) => {
             this.#num = 0;
             return prev
@@ -158,11 +159,17 @@ export class AbsenceListComponent implements OnInit {
   applyFilters(filters: AbsenceFilters) {
     this.filtersOpened.set(false);
     this.message.set(null);
-    if (filters.membersIds) {
+    const organization = this.#organizationsService.selectedOrganization()!;
+    if (organization.isAdmin) {
+      const selected = filters.membersIds ?? [];
+      const userIds =
+        selected.length > 0
+          ? selected
+          : this.members().map((member) => member.id);
       this.#loadAbsencesBySelectedUsers(
         filters.startDate,
         filters.endDate,
-        filters.membersIds
+        userIds
       );
     } else {
       this.#loadAbsences(filters.startDate, filters.endDate);

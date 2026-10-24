@@ -1,4 +1,4 @@
-import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import {
   CreateHolidayDTO,
@@ -9,7 +9,7 @@ import { catchError, map, Observable, of } from 'rxjs';
 import { DataResult, Result } from '../../common/models/result.models';
 import { environment } from '../../../environments/environment';
 import { Router } from '@angular/router';
-import { navigateToErrorPage } from '../../common/services/error-utilities';
+import { toApiFailure } from '../../common/services/error-utilities';
 import { DateHelper } from '../../common/helpers/date-helper';
 
 @Injectable({
@@ -24,22 +24,28 @@ export class HolidaysService {
     startDate: Date,
     endDate: Date
   ): Observable<DataResult<HolidayDTO[]>> {
+    const range = DateHelper.holidayQueryRange(startDate, endDate);
     return this.#client
       .get<HolidayDTO[]>(
         `${environment.apiUrl}/organizations/${organizationId}/holidays`,
         {
           params: new HttpParams()
-            .set('startDate', DateHelper.getDateOnlyString(startDate))
-            .set('endDate', DateHelper.getDateOnlyString(endDate)),
+            .set('startDate', range.start)
+            .set('endDate', range.end),
         }
       )
       .pipe(
         map((res: HolidayDTO[]) => DataResult.success<HolidayDTO[]>(res)),
-        catchError((error) => {
-          console.error(error);
-          navigateToErrorPage(this.#router, error);
-          return of(DataResult.fail<HolidayDTO[]>());
-        })
+        catchError((error: HttpErrorResponse) =>
+          of(
+            toApiFailure(
+              this.#router,
+              error,
+              (message) => DataResult.fail<HolidayDTO[]>(message),
+              { notFound: 'Organization was not found.' }
+            )
+          )
+        )
       );
   }
 
@@ -48,39 +54,47 @@ export class HolidaysService {
       .post<number>(`${environment.apiUrl}/holidays`, holiday)
       .pipe(
         map((res: number) => DataResult.success<number>(res)),
-        catchError((error) => {
-          console.error(error);
-          if (error.status === 400) {
-            return of(DataResult.fail<number>(error.error));
-          }
-          navigateToErrorPage(this.#router, error);
-          return of(DataResult.fail<number>());
-        })
+        catchError((error: HttpErrorResponse) =>
+          of(
+            toApiFailure(
+              this.#router,
+              error,
+              (message) => DataResult.fail<number>(message),
+              {
+                forbidden: 'Only an admin can add a holiday.',
+                notFound: 'Organization was not found.',
+              }
+            )
+          )
+        )
       );
   }
 
   editHoliday(holiday: EditHolidayDTO): Observable<Result> {
     return this.#client.put(`${environment.apiUrl}/holidays`, holiday).pipe(
       map(() => Result.success()),
-      catchError((error) => {
-        console.error(error);
-        if (error.status === 400) {
-          return of(Result.fail(error.error));
-        }
-        navigateToErrorPage(this.#router, error);
-        return of(Result.fail());
-      })
+      catchError((error: HttpErrorResponse) =>
+        of(
+          toApiFailure(this.#router, error, (message) => Result.fail(message), {
+            forbidden: 'Only an admin can edit a holiday.',
+            notFound: 'Holiday was not found.',
+          })
+        )
+      )
     );
   }
 
   deleteHoliday(id: number): Observable<Result> {
     return this.#client.delete(`${environment.apiUrl}/holidays/${id}`).pipe(
       map(() => Result.success()),
-      catchError((error) => {
-        console.error(error);
-        navigateToErrorPage(this.#router, error);
-        return of(Result.fail());
-      })
+      catchError((error: HttpErrorResponse) =>
+        of(
+          toApiFailure(this.#router, error, (message) => Result.fail(message), {
+            forbidden: 'Only an admin can delete a holiday.',
+            notFound: 'Holiday was not found.',
+          })
+        )
+      )
     );
   }
 }

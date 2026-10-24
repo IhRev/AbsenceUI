@@ -19,11 +19,9 @@ export class RegisterDTO {
   ) {}
 }
 
-export interface AuthResponse {
-  isSuccess: boolean;
-  message: string | null;
-  accessToken: string | null;
-  refreshToken: string | null;
+export interface AuthTokens {
+  accessToken: string;
+  refreshToken: string;
 }
 
 export class DeleteUserRequest {

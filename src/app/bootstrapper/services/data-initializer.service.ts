@@ -1,9 +1,8 @@
 import { effect, inject, Injectable, signal } from '@angular/core';
 import { AuthService } from '../../auth/services/auth.service';
 import { AbsenceTypeService } from '../../absences/services/absence-type.service';
-import { EventTypesService } from '../../admin-panel/services/event-types.service';
 import { OrganizationsService } from '../../organizations/services/organizations.service';
-import { catchError, forkJoin, lastValueFrom, of } from 'rxjs';
+import { catchError, lastValueFrom, of, switchMap } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -11,7 +10,6 @@ import { catchError, forkJoin, lastValueFrom, of } from 'rxjs';
 export class DataInitializerService {
   #authService = inject(AuthService);
   #absenceTypeService = inject(AbsenceTypeService);
-  #eventTypesService = inject(EventTypesService);
   #organizationsService = inject(OrganizationsService);
 
   isLoading = signal(true);
@@ -37,17 +35,25 @@ export class DataInitializerService {
 
   #loadAll(): Promise<void> {
     return lastValueFrom(
-      forkJoin([
-        this.#absenceTypeService.load(),
-        this.#eventTypesService.load(),
-        this.#organizationsService.load(),
-      ]).pipe(catchError((err) => of([])))
+      this.#organizationsService.load().pipe(
+        switchMap(() => {
+          const organization = this.#organizationsService.selectedOrganization();
+          if (!organization) {
+            this.#absenceTypeService.unload();
+            return of(null);
+          }
+          return this.#absenceTypeService.load(organization.id);
+        }),
+        catchError((err) => {
+          console.error(err);
+          return of(null);
+        })
+      )
     ).then(() => {});
   }
 
   #unloadAll() {
     this.#absenceTypeService.unload();
-    this.#eventTypesService.unload();
     this.#organizationsService.unload();
   }
 }

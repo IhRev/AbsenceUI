@@ -1,7 +1,4 @@
-export interface EventTypeDTO {
-  id: number;
-  name: string;
-}
+export const absenceEventTypeNames = ['Create', 'Update', 'Delete'];
 
 export interface EventDTO {
   id: number;
