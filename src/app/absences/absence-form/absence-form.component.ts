@@ -83,6 +83,11 @@ export class AbsenceFormComponent {
   }
 
   submit() {
+    this.form.markAllAsTouched();
+    if (this.form.invalid) {
+      return;
+    }
+
     const absence = this.absence();
     if (absence) {
       this.submitEdit.emit(

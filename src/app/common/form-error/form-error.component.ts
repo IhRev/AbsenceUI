@@ -14,7 +14,7 @@ export class FormErrorComponent {
 
   get isInvalid(): boolean {
     const control = this.form()!.get(this.name()!);
-    return !!control && control.touched && control.dirty;
+    return !!control && control.invalid && control.touched;
   }
 
   getErrorMessage(errorKey: string, errorValue: any): string {
