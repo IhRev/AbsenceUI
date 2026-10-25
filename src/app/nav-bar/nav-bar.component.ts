@@ -17,11 +17,12 @@ export class NavBarComponent {
   isSubmenuOpen = signal(false);
 
   linkClicked(tabName?: string) {
-    if (this.isMenuOpen) {
+    if (this.isMenuOpen()) {
       if (tabName === 'profile') {
-        this.isSubmenuOpen.set(!this.isSubmenuOpen);
+        this.isSubmenuOpen.update((open) => !open);
       } else {
         this.isMenuOpen.set(false);
+        this.isSubmenuOpen.set(false);
       }
     }
   }
