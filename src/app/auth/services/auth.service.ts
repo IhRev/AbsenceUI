@@ -98,9 +98,11 @@ export class AuthService {
       })
       .pipe(
         map(() => {
-          localStorage.clear();
-          this.loggedIn.set(false);
-          this.userDetails.set(null);
+          const userId = this.userDetails()?.id;
+          if (userId != null) {
+            localStorage.removeItem(`${userId}:organization`);
+          }
+          this.logoutLocally();
           return Result.success();
         }),
         catchError((error: HttpErrorResponse) =>
