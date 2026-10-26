@@ -175,13 +175,9 @@ export class AuthService {
 
   logout(): Observable<Result> {
     return this.#client.post(`${environment.apiUrl}/auth/logout`, null).pipe(
-      map(() => {
-        this.logoutLocally();
-        return Result.success();
-      }),
-      catchError((error: HttpErrorResponse) =>
-        of(toApiFailure(this.#router, error, (message) => Result.fail(message)))
-      )
+      map(() => Result.success()),
+      catchError(() => of(Result.success())),
+      finalize(() => this.logoutLocally())
     );
   }
 
