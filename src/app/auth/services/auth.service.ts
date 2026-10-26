@@ -112,22 +112,29 @@ export class AuthService {
   }
 
   login(credentials: UserCredentials): Observable<Result> {
+    let tokensStored = false;
     return this.#client
       .post<AuthTokens>(`${environment.apiUrl}/auth/login`, credentials)
       .pipe(
         tap((tokens) => {
           localStorage.setItem('accessToken', tokens.accessToken);
           localStorage.setItem('refreshToken', tokens.refreshToken);
-          this.loggedIn.set(true);
+          tokensStored = true;
         }),
         switchMap(() =>
-          this.#loadUserDetails().pipe(map(() => Result.success()))
-        ),
-        catchError((error: HttpErrorResponse) =>
-          of(
-            toApiFailure(this.#router, error, (message) => Result.fail(message))
+          this.#loadUserDetails().pipe(
+            tap(() => this.loggedIn.set(true)),
+            map(() => Result.success())
           )
-        )
+        ),
+        catchError((error: HttpErrorResponse) => {
+          if (tokensStored) {
+            this.logoutLocally();
+          }
+          return of(
+            toApiFailure(this.#router, error, (message) => Result.fail(message))
+          );
+        })
       );
   }
 
