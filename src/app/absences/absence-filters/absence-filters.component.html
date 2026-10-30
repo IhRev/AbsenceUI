@@ -12,7 +12,7 @@
       <app-form-error [form]="form" [name]="'endDate'" />
     </div>
 
-    @if(organizationsService.selectedOrganization()!.isAdmin){
+    @if(organizationsService.selectedOrganization()?.isAdmin){
     <div class="input-item">
       <label for="member">Member</label>
       <select id="member" formControlName="selectedMembers" multiple>

@@ -1,82 +1,90 @@
-<div class="container">
-  @if (!isProcessing()) {
-  <div class="manage-panel">
-    <div
-      class="msg-box"
-      [ngClass]="{
-        'success-msg': isSuccess() && message(),
-        'error-msg': !isSuccess() && message()
-      }"
-    >
-      <span class="msg">{{ message() }}</span>
-      @if(message()){
-      <button (click)="message.set(null)" class="close-btn">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-      }
-    </div>
-
-    <div class="btns">
-      <button class="filter-btn" (click)="filtersOpened.set(true)">
-        <i class="fa-solid fa-filter"></i>
-      </button>
-
-      <button class="add-btn" (click)="openForm()">
-        <i class="fa-solid fa-plus"></i>
-      </button>
-    </div>
+@if (!organizationService.selectedOrganization()) {
+  <div class="container">
+    <h2>Select an organization first.</h2>
+    <a routerLink="/organizations">Organizations</a>
   </div>
-  <div class="grid-list">
-    <div class="grid-header grid-row">
-      <span>#</span>
-      <span>Member</span>
-      <span>Name</span>
-      <span>Type</span>
-      <span>Start Date</span>
-      <span>End Date</span>
-      <span>Actions</span>
-    </div>
-    @for (absence of absences(); track $index) {
-    <div class="grid-row grid-item-row">
-      <span data-label="#">{{ absence.num }}</span>
-      <span data-label="Member">{{ absence.member | membername }}</span>
-      <span data-label="Name">{{ absence.name }}</span>
-      <span data-label="Type">{{ absence.type.name }}</span>
-      <span data-label="Start Date">{{
-        absence.startDate | date : "dd.MM.yyyy"
-      }}</span>
-      <span data-label="End Date">{{
-        absence.endDate | date : "dd.MM.yyyy"
-      }}</span>
-      <span data-label="Actions">
-        <div class="action-buttons">
-          <button class="delete-btn" (click)="delete(absence.id)">
-            <i class="fa-solid fa-trash"></i>
+} @else {
+  <div class="container">
+    @if (!isProcessing()) {
+      <div class="manage-panel">
+        <div
+          class="msg-box"
+          [ngClass]="{
+            'success-msg': isSuccess() && message(),
+            'error-msg': !isSuccess() && message(),
+          }"
+        >
+          <span class="msg">{{ message() }}</span>
+          @if (message()) {
+            <button (click)="message.set(null)" class="close-btn">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          }
+        </div>
+
+        <div class="btns">
+          <button class="filter-btn" (click)="filtersOpened.set(true)">
+            <i class="fa-solid fa-filter"></i>
           </button>
-          <button class="edit-btn" (click)="openForm(absence)">
-            <i class="fa-solid fa-pen"></i>
+
+          <button class="add-btn" (click)="openForm()">
+            <i class="fa-solid fa-plus"></i>
           </button>
         </div>
-      </span>
-    </div>
+      </div>
+      <div class="grid-list">
+        <div class="grid-header grid-row">
+          <span>#</span>
+          <span>Member</span>
+          <span>Name</span>
+          <span>Type</span>
+          <span>Start Date</span>
+          <span>End Date</span>
+          <span>Actions</span>
+        </div>
+        @for (absence of absences(); track $index) {
+          <div class="grid-row grid-item-row">
+            <span data-label="#">{{ absence.num }}</span>
+            <span data-label="Member">{{ absence.member | membername }}</span>
+            <span data-label="Name">{{ absence.name }}</span>
+            <span data-label="Type">{{ absence.type.name }}</span>
+            <span data-label="Start Date">{{
+              absence.startDate | date: "dd.MM.yyyy"
+            }}</span>
+            <span data-label="End Date">{{
+              absence.endDate | date: "dd.MM.yyyy"
+            }}</span>
+            <span data-label="Actions">
+              <div class="action-buttons">
+                <button class="delete-btn" (click)="delete(absence.id)">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+                <button class="edit-btn" (click)="openForm(absence)">
+                  <i class="fa-solid fa-pen"></i>
+                </button>
+              </div>
+            </span>
+          </div>
+        }
+      </div>
+    } @else {
+      <i class="fa-solid fa-spinner fa-spin load-icon"></i>
     }
   </div>
-  } @else {
-  <i class="fa-solid fa-spinner fa-spin load-icon"></i>
-  }
-</div>
 
-@if(isFormOpened()){
-<app-absence-form
-  (closeModal)="isFormOpened.set(false)"
-  (submitCreate)="create($event)"
-  (submitEdit)="edit($event)"
-  [absence]="selectedAbsence()"
-/>
-} @if(filtersOpened()){
-<app-absence-filters
-  (closeModal)="filtersOpened.set(false)"
-  (submitModal)="applyFilters($event)"
-  [members]="members()"
-/>
+  @if (isFormOpened()) {
+    <app-absence-form
+      (closeModal)="isFormOpened.set(false)"
+      (submitCreate)="create($event)"
+      (submitEdit)="edit($event)"
+      [absence]="selectedAbsence()"
+    />
+  }
+  @if (filtersOpened()) {
+    <app-absence-filters
+      (closeModal)="filtersOpened.set(false)"
+      (submitModal)="applyFilters($event)"
+      [members]="members()"
+    />
+  }
 }

@@ -3,11 +3,13 @@ import { absenceEventTypeNames, Event } from '../models/events.models';
 import { EventsService } from '../services/events.service';
 import { DatePipe } from '@angular/common';
 import { AbsenceTypeService } from '../../absences/services/absence-type.service';
+import { OrganizationsService } from '../../organizations/services/organizations.service';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-events',
   standalone: true,
-  imports: [DatePipe],
+  imports: [DatePipe, RouterLink],
   templateUrl: './events.component.html',
   styleUrl: './events.component.css',
 })
@@ -15,10 +17,14 @@ export class EventsComponent implements OnInit {
   #num = 0;
   readonly #eventsService = inject(EventsService);
   readonly #absenceTypeService = inject(AbsenceTypeService);
+  readonly organizationService = inject(OrganizationsService);
 
   events = signal<Event[]>([]);
 
   ngOnInit() {
+    if (!this.organizationService.selectedOrganization()) {
+      return;
+    }
     this.#load();
   }
 

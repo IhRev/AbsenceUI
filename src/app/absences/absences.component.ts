@@ -17,6 +17,7 @@ import { OrganizationsService } from '../organizations/services/organizations.se
 import { MemberDTO } from '../organizations/models/organizations.models';
 import { AuthService } from '../auth/services/auth.service';
 import { MemberNameTransformPipe } from '../common/pipes/member-name-transform.pipe';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'absence-list',
@@ -27,6 +28,7 @@ import { MemberNameTransformPipe } from '../common/pipes/member-name-transform.p
     AbsenceFiltersComponent,
     NgClass,
     MemberNameTransformPipe,
+    RouterLink,
   ],
   templateUrl: './absences.component.html',
   styleUrls: [
@@ -38,7 +40,7 @@ export class AbsenceListComponent implements OnInit {
   #num = 0;
   readonly #absenceService = inject(AbsenceService);
   readonly #absenceTypeService = inject(AbsenceTypeService);
-  readonly #organizationsService = inject(OrganizationsService);
+  readonly organizationService = inject(OrganizationsService);
   readonly #authService = inject(AuthService);
 
   members = signal<MemberDTO[]>([]);
@@ -51,10 +53,13 @@ export class AbsenceListComponent implements OnInit {
   selectedAbsence = signal<Absence | null>(null);
 
   ngOnInit() {
-    const organization = this.#organizationsService.selectedOrganization()!;
+    const organization = this.organizationService.selectedOrganization();
+    if (!organization) {
+      return;
+    }
     if (organization.isAdmin) {
       this.isProcessing.set(true);
-      this.#organizationsService.getMembers().subscribe((res) => {
+      this.organizationService.getMembers().subscribe((res) => {
         if (res.isSuccess) {
           this.members.set(res.data!);
           this.isProcessing.set(false);
@@ -71,8 +76,8 @@ export class AbsenceListComponent implements OnInit {
           this.#authService.userDetails()!.id,
           this.#authService.userDetails()!.firstName +
             this.#authService.userDetails()!.lastName,
-          this.#organizationsService.selectedOrganization()!.isAdmin,
-          this.#organizationsService.selectedOrganization()!.isOwner
+          organization.isAdmin,
+          organization.isOwner
         ),
       ]);
       this.#loadAbsences(
@@ -159,7 +164,10 @@ export class AbsenceListComponent implements OnInit {
   applyFilters(filters: AbsenceFilters) {
     this.filtersOpened.set(false);
     this.message.set(null);
-    const organization = this.#organizationsService.selectedOrganization()!;
+    const organization = this.organizationService.selectedOrganization();
+    if (!organization) {
+      return;
+    }
     if (organization.isAdmin) {
       const selected = filters.membersIds ?? [];
       const userIds =

@@ -35,12 +35,21 @@
   </div>
   } @else {
   <div class="logged-in-container">
+    @if (organizationService.selectedOrganization()) {
     <h2 class="label">
       Hello <span class="name">{{ authService.userDetails()!.firstName }}</span
       >, wanna take some free days?<br />You are just a few clicks away from the
       vacation <i class="fa-solid fa-face-smile"></i><br />Just
       <a class="absences-link" routerLink="/absences">click here</a>
     </h2>
+    } @else {
+    <h2 class="label">
+      Hello <span class="name">{{ authService.userDetails()!.firstName }}</span
+      >.<br />Create or choose an organization before you can request days
+      off.<br />
+      <a class="absences-link" routerLink="/organizations">Go to organizations</a>
+    </h2>
+    }
   </div>
   }
 </div>

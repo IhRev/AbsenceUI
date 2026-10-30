@@ -1,3 +1,9 @@
+@if (!organizationService.selectedOrganization()) {
+<div class="container">
+  <h2>Select an organization first.</h2>
+  <a routerLink="/organizations">Organizations</a>
+</div>
+} @else {
 <div class="container">
   <div class="bar-chart-container">
     <div class="filters">
@@ -36,3 +42,4 @@
     <canvas class="barChart" id="canvas"></canvas>
   </div>
 </div>
+}

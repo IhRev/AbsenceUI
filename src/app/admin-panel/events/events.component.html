@@ -1,5 +1,8 @@
 <div class="container">
-  @if (events().length === 0) {
+  @if (!organizationService.selectedOrganization()) {
+  <h3>Select an organization first.</h3>
+  <a routerLink="/organizations">Organizations</a>
+  } @else if (events().length === 0) {
   <h3>No events!</h3>
   }@else {
   <div class="table-form">
