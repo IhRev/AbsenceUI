@@ -2,9 +2,15 @@
   @if (!organizationService.selectedOrganization()) {
   <h3>Select an organization first.</h3>
   <a routerLink="/organizations">Organizations</a>
-  } @else if (events().length === 0) {
+  } @else {
+  @if (message()) {
+  <h3>{{ message() }}</h3>
+  }
+  @if (events().length === 0) {
+  @if (!message()) {
   <h3>No events!</h3>
-  }@else {
+  }
+  } @else {
   <div class="table-form">
     <table>
       <thead>
@@ -44,5 +50,6 @@
       </tbody>
     </table>
   </div>
+  }
   }
 </div>

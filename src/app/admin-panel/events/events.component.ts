@@ -20,6 +20,7 @@ export class EventsComponent implements OnInit {
   readonly organizationService = inject(OrganizationsService);
 
   events = signal<Event[]>([]);
+  message = signal<string | null>(null);
 
   ngOnInit() {
     if (!this.organizationService.selectedOrganization()) {
@@ -29,6 +30,7 @@ export class EventsComponent implements OnInit {
   }
 
   respond(id: number, accepted: boolean) {
+    this.message.set(null);
     this.#eventsService.respond(id, accepted).subscribe({
       next: (res) => {
         if (res.isSuccess) {
@@ -41,6 +43,8 @@ export class EventsComponent implements OnInit {
                 return e;
               });
           });
+        } else {
+          this.message.set(res.message);
         }
       },
     });
@@ -49,27 +53,42 @@ export class EventsComponent implements OnInit {
   #load() {
     this.#eventsService.getEvents().subscribe({
       next: (res) => {
-        if (res.isSuccess) {
-          this.#num = 0;
-          this.events.set(
-            res.data!.map(
-              (e) =>
-                new Event(
-                  ++this.#num,
-                  e.id,
-                  e.name,
-                  e.startDate,
-                  e.endDate,
-                  this.#absenceTypeService.types!.find(
-                    (t) => t.id === e.absenceType
-                  )!.name,
-                  e.user,
-                  absenceEventTypeNames[e.absenceEventType] ?? 'Unknown'
-                )
-            )
-          );
+        if (!res.isSuccess) {
+          this.events.set([]);
+          this.message.set(res.message);
+          return;
         }
+        const rows = res.data!.map(
+          (e) =>
+            new Event(
+              0,
+              e.id,
+              e.name,
+              e.startDate,
+              e.endDate,
+              this.#absenceTypeName(e.absenceType),
+              e.user,
+              absenceEventTypeNames[e.absenceEventType] ?? 'Unknown'
+            )
+        );
+        this.#num = 0;
+        for (const row of rows) {
+          row.num = ++this.#num;
+        }
+        this.events.set(rows);
+        this.message.set(
+          rows.length > 0 && !this.#absenceTypeService.types
+            ? 'Absence types are not available.'
+            : null
+        );
       },
     });
+  }
+
+  #absenceTypeName(typeId: number) {
+    return (
+      this.#absenceTypeService.types?.find((type) => type.id === typeId)?.name ??
+      'Unknown'
+    );
   }
 }
