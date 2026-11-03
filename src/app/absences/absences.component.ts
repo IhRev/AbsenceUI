@@ -68,6 +68,10 @@ export class AbsenceListComponent implements OnInit {
             DateHelper.getEndOfTheCurrentYear(),
             res.data!.map((member) => member.id)
           );
+        } else {
+          this.isProcessing.set(false);
+          this.isSuccess.set(false);
+          this.message.set(res.message);
         }
       });
     } else {
@@ -94,18 +98,22 @@ export class AbsenceListComponent implements OnInit {
     this.#absenceService.addAbsence(absence).subscribe({
       next: (result) => {
         if (result.isSuccess && result.data) {
-          const newAbsence = new Absence(
-            ++this.#num,
-            result.data,
-            absence.name,
-            this.#absenceTypeService.types!.find((t) => t.id === absence.type)!,
-            this.members().find(
-              (m) => m.id === this.#authService.userDetails()!.id
-            )!,
-            absence.startDate,
-            absence.endDate
+          const type = this.#typeById(absence.type);
+          const member = this.members().find(
+            (m) => m.id === this.#authService.userDetails()!.id
           );
-          this.absences.update((a) => [...a, newAbsence]);
+          if (type && member) {
+            const newAbsence = new Absence(
+              ++this.#num,
+              result.data,
+              absence.name,
+              type,
+              member,
+              absence.startDate,
+              absence.endDate
+            );
+            this.absences.update((a) => [...a, newAbsence]);
+          }
         }
         this.isProcessing.set(false);
         this.isSuccess.set(result.isSuccess);
@@ -121,15 +129,16 @@ export class AbsenceListComponent implements OnInit {
     this.#absenceService.editAbsence(absence).subscribe({
       next: (result) => {
         if (result.isSuccess && !result.queued) {
-          this.selectedAbsence.update((a) => {
-            a!.name = absence.name;
-            a!.type = this.#absenceTypeService.types!.find(
-              (t) => t.id === absence.type
-            )!;
-            a!.startDate = absence.startDate;
-            a!.endDate = absence.endDate;
-            return a;
-          });
+          const type = this.#typeById(absence.type);
+          if (type) {
+            this.selectedAbsence.update((a) => {
+              a!.name = absence.name;
+              a!.type = type;
+              a!.startDate = absence.startDate;
+              a!.endDate = absence.endDate;
+              return a;
+            });
+          }
         }
         this.isProcessing.set(false);
         this.isSuccess.set(result.isSuccess);
@@ -202,9 +211,7 @@ export class AbsenceListComponent implements OnInit {
           if (result.isSuccess) {
             this.#setAbsences(result.data!);
           } else {
-            this.absences.set([]);
-            this.isSuccess.set(false);
-            this.message.set(result.message);
+            this.#showLoadFailure(result.message);
           }
           this.isProcessing.set(false);
         },
@@ -218,9 +225,7 @@ export class AbsenceListComponent implements OnInit {
         if (result.isSuccess) {
           this.#setAbsences(result.data!);
         } else {
-          this.absences.set([]);
-          this.isSuccess.set(false);
-          this.message.set(result.message);
+          this.#showLoadFailure(result.message);
         }
         this.isProcessing.set(false);
       },
@@ -228,20 +233,52 @@ export class AbsenceListComponent implements OnInit {
   }
 
   #setAbsences(absences: AbsenceDTO[]) {
+    const types = this.#absenceTypeService.types;
+    if (!types) {
+      this.#showLoadFailure('Absence types are not available.');
+      return;
+    }
+
     this.#num = 0;
-    this.absences.set(
-      absences.map(
-        (a) =>
-          new Absence(
-            ++this.#num,
-            a.id,
-            a.name,
-            this.#absenceTypeService.types!.find((t) => t.id === a.type)!,
-            this.members().find((m) => m.id === a.userId)!,
-            a.startDate,
-            a.endDate
-          )
-      )
-    );
+    const rows: Absence[] = [];
+    let skipped = 0;
+    for (const absence of absences) {
+      const type = types.find((item) => item.id === absence.type);
+      const member = this.members().find((item) => item.id === absence.userId);
+      if (!type || !member) {
+        skipped++;
+        continue;
+      }
+      rows.push(
+        new Absence(
+          ++this.#num,
+          absence.id,
+          absence.name,
+          type,
+          member,
+          absence.startDate,
+          absence.endDate
+        )
+      );
+    }
+    this.absences.set(rows);
+    if (skipped > 0) {
+      this.isSuccess.set(false);
+      this.message.set(
+        skipped === 1
+          ? '1 absence could not be shown.'
+          : `${skipped} absences could not be shown.`
+      );
+    }
+  }
+
+  #typeById(typeId: number) {
+    return this.#absenceTypeService.types?.find((type) => type.id === typeId);
+  }
+
+  #showLoadFailure(message: string) {
+    this.absences.set([]);
+    this.isSuccess.set(false);
+    this.message.set(message);
   }
 }
