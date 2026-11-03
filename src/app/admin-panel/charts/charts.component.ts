@@ -123,6 +123,11 @@ export class ChartsComponent implements OnInit {
   }
 
   #updateChartData(absences: AbsenceDTO[], holidays: Date[]) {
+    const holidayDays = new Set(
+      holidays.map((holiday) =>
+        DateHelper.getDateOnlyString(new Date(holiday))
+      )
+    );
     const counts = Array(12).fill(0);
     for (const absence of absences) {
       for (
@@ -130,7 +135,7 @@ export class ChartsComponent implements OnInit {
         date <= new Date(absence.endDate);
         date.setDate(date.getDate() + 1)
       ) {
-        if (!holidays.includes(date)) {
+        if (!holidayDays.has(DateHelper.getDateOnlyString(date))) {
           counts[date.getMonth()]++;
         }
       }
