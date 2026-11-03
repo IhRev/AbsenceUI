@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { Chart, ChartConfiguration, ChartType } from 'chart.js/auto';
 import { AbsenceDTO } from '../../absences/models/absence.models';
 import { AbsenceService } from '../../absences/services/absence.service';
@@ -18,7 +18,7 @@ import { RouterLink } from '@angular/router';
   templateUrl: './charts.component.html',
   styleUrl: './charts.component.css',
 })
-export class ChartsComponent implements OnInit {
+export class ChartsComponent implements OnInit, OnDestroy {
   readonly #absenceService = inject(AbsenceService);
   readonly #holidaysService = inject(HolidaysService);
   readonly organizationService = inject(OrganizationsService);
@@ -105,7 +105,17 @@ export class ChartsComponent implements OnInit {
       });
   }
 
+  ngOnDestroy() {
+    if (this.chart instanceof Chart) {
+      this.chart.destroy();
+      this.chart = null;
+    }
+  }
+
   #createChart() {
+    if (this.chart instanceof Chart) {
+      this.chart.destroy();
+    }
     this.chart = new Chart('canvas', {
       type: 'bar',
       data: {
@@ -123,6 +133,11 @@ export class ChartsComponent implements OnInit {
   }
 
   #updateChartData(absences: AbsenceDTO[], holidays: Date[]) {
+    if (!(this.chart instanceof Chart)) {
+      return;
+    }
+    const yearStart = DateHelper.getStartOfTheYear(this.selectedYear());
+    const yearEnd = DateHelper.getEndOfTheYear(this.selectedYear());
     const holidayDays = new Set(
       holidays.map((holiday) =>
         DateHelper.getDateOnlyString(new Date(holiday))
@@ -130,11 +145,13 @@ export class ChartsComponent implements OnInit {
     );
     const counts = Array(12).fill(0);
     for (const absence of absences) {
-      for (
-        let date = new Date(absence.startDate);
-        date <= new Date(absence.endDate);
-        date.setDate(date.getDate() + 1)
-      ) {
+      let date = DateHelper.startOfLocalDay(new Date(absence.startDate));
+      const end = DateHelper.startOfLocalDay(new Date(absence.endDate));
+      if (date < yearStart) {
+        date = new Date(yearStart);
+      }
+      const last = end > yearEnd ? yearEnd : end;
+      for (; date <= last; date.setDate(date.getDate() + 1)) {
         if (!holidayDays.has(DateHelper.getDateOnlyString(date))) {
           counts[date.getMonth()]++;
         }
