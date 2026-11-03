@@ -44,8 +44,8 @@ export class HolidayFiltersComponent {
     if (this.form.valid) {
       this.submitModal.emit(
         new HolidayFilters(
-          new Date(this.form.value.startDate!),
-          new Date(this.form.value.endDate!)
+          DateHelper.parseDateOnly(this.form.value.startDate!),
+          DateHelper.parseDateOnly(this.form.value.endDate!)
         )
       );
     }

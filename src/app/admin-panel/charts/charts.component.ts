@@ -140,13 +140,13 @@ export class ChartsComponent implements OnInit, OnDestroy {
     const yearEnd = DateHelper.getEndOfTheYear(this.selectedYear());
     const holidayDays = new Set(
       holidays.map((holiday) =>
-        DateHelper.getDateOnlyString(new Date(holiday))
+        DateHelper.getDateOnlyString(DateHelper.parseDateOnly(holiday))
       )
     );
     const counts = Array(12).fill(0);
     for (const absence of absences) {
-      let date = DateHelper.startOfLocalDay(new Date(absence.startDate));
-      const end = DateHelper.startOfLocalDay(new Date(absence.endDate));
+      let date = DateHelper.parseDateOnly(absence.startDate);
+      const end = DateHelper.parseDateOnly(absence.endDate);
       if (date < yearStart) {
         date = new Date(yearStart);
       }

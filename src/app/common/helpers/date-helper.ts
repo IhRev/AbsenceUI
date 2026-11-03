@@ -30,6 +30,21 @@ export class DateHelper {
     return new Date(date.getFullYear(), date.getMonth(), date.getDate());
   }
 
+  // A date-only string is UTC midnight. Build the same calendar day in local time.
+  static parseDateOnly(value: string | Date): Date {
+    if (typeof value === 'string') {
+      const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+      if (match) {
+        return new Date(
+          Number(match[1]),
+          Number(match[2]) - 1,
+          Number(match[3])
+        );
+      }
+    }
+    return DateHelper.startOfLocalDay(new Date(value));
+  }
+
   static toOffsetString(date: Date): string {
     const pad = (value: number) => value.toString().padStart(2, '0');
     const offsetMinutes = -date.getTimezoneOffset();

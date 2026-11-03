@@ -51,7 +51,11 @@ export class HolidaysService {
 
   addHoliday(holiday: CreateHolidayDTO): Observable<DataResult<number>> {
     return this.#client
-      .post<number>(`${environment.apiUrl}/holidays`, holiday)
+      .post<number>(`${environment.apiUrl}/holidays`, {
+        name: holiday.name,
+        date: DateHelper.getDateOnlyString(holiday.date),
+        organizationId: holiday.organizationId,
+      })
       .pipe(
         map((res: number) => DataResult.success<number>(res)),
         catchError((error: HttpErrorResponse) =>
@@ -71,7 +75,11 @@ export class HolidaysService {
   }
 
   editHoliday(holiday: EditHolidayDTO): Observable<Result> {
-    return this.#client.put(`${environment.apiUrl}/holidays`, holiday).pipe(
+    return this.#client.put(`${environment.apiUrl}/holidays`, {
+      id: holiday.id,
+      name: holiday.name,
+      date: DateHelper.getDateOnlyString(holiday.date),
+    }).pipe(
       map(() => Result.success()),
       catchError((error: HttpErrorResponse) =>
         of(

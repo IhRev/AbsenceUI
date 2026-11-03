@@ -45,9 +45,19 @@ export class AbsenceService {
 
   addAbsence(absence: CreateAbsenceDTO): Observable<DataResult<number | null>> {
     return this.#client
-      .post<number>(`${environment.apiUrl}/absences`, absence, {
-        observe: 'response',
-      })
+      .post<number>(
+        `${environment.apiUrl}/absences`,
+        {
+          name: absence.name,
+          type: absence.type,
+          startDate: DateHelper.getDateOnlyString(absence.startDate),
+          endDate: DateHelper.getDateOnlyString(absence.endDate),
+          organization: absence.organization,
+        },
+        {
+          observe: 'response',
+        }
+      )
       .pipe(
         map((res) => {
           if (res.status === 202) {
@@ -76,7 +86,17 @@ export class AbsenceService {
 
   editAbsence(absence: EditAbsenceDTO): Observable<Result> {
     return this.#client
-      .put(`${environment.apiUrl}/absences`, absence, { observe: 'response' })
+      .put(
+        `${environment.apiUrl}/absences`,
+        {
+          id: absence.id,
+          name: absence.name,
+          type: absence.type,
+          startDate: DateHelper.getDateOnlyString(absence.startDate),
+          endDate: DateHelper.getDateOnlyString(absence.endDate),
+        },
+        { observe: 'response' }
+      )
       .pipe(
         map((res) =>
           Result.success(

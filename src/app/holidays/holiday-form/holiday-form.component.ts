@@ -62,7 +62,9 @@ export class HolidayFormComponent {
       if (holiday) {
         this.form.setValue({
           name: holiday!.name,
-          date: DateHelper.getDateOnlyString(new Date(holiday!.date)),
+          date: DateHelper.getDateOnlyString(
+            DateHelper.parseDateOnly(holiday!.date)
+          ),
         });
         queueMicrotask(() => this.title.set('Update Holiday'));
       } else {
@@ -82,14 +84,14 @@ export class HolidayFormComponent {
           new EditHolidayDTO(
             this.holiday()!.id,
             this.form.value.name!,
-            new Date(this.form.value.date!)
+            DateHelper.parseDateOnly(this.form.value.date!)
           )
         );
       } else {
         this.submitCreate.emit(
           new CreateHolidayDTO(
             this.form.value.name!,
-            new Date(this.form.value.date!),
+            DateHelper.parseDateOnly(this.form.value.date!),
             this.#organizationsService.selectedOrganization()!.id
           )
         );
