@@ -72,20 +72,21 @@ organizationService.organizations()!.length === 0) {
       <ng-container *ngTemplateOutlet="orgListBlockContent"></ng-container>
     </app-wrappable-control>
 
+    @if (organizationService.selectedOrganization(); as organization) {
     @if(members()){
     <hr class="wide-screen" />
 
     <!-- Organization details content -->
     <ng-template #orgDetailsContent>
-      @if (organizationService.selectedOrganization()!.isAdmin) {
+      @if (organization.isAdmin) {
       <div class="org-details">
         <button class="invite-btn" (click)="isInviteFormOpened.set(true)">
           Invite user
         </button>
-        @if (organizationService.selectedOrganization()!.isOwner) {
+        @if (organization.isOwner) {
         <button
           class="edit-btn"
-          (click)="openForm(organizationService.selectedOrganization()!)"
+          (click)="openForm(organization)"
         >
           Edit
         </button>
@@ -123,24 +124,24 @@ organizationService.organizations()!.length === 0) {
 
     <!-- Desktop organization details -->
     <div class="organization-block wide-screen">
-      <h1>{{ organizationService.selectedOrganization()!.name }}</h1>
+      <h1>{{ organization.name }}</h1>
       <ng-container *ngTemplateOutlet="orgDetailsContent"></ng-container>
     </div>
 
     <!-- Mobile organization details -->
     <app-wrappable-control
       class="narrow-screen"
-      [title]="organizationService.selectedOrganization()!.name"
+      [title]="organization.name"
     >
       <ng-container *ngTemplateOutlet="orgDetailsContent"></ng-container>
     </app-wrappable-control>
     } @if (selectedMember() && !selectedMember()!.isOwner &&
-    organizationService.selectedOrganization()!.isAdmin) {
+    organization.isAdmin) {
     <hr class="wide-screen" />
 
     <!-- Member details content -->
     <ng-template #memberContent>
-      @if (organizationService.selectedOrganization()!.isAdmin) {
+      @if (organization.isAdmin) {
       <div class="member-details">
         <button class="access-btn" (click)="openConfirmation(changeAccess)">
           Change access
@@ -165,6 +166,7 @@ organizationService.organizations()!.length === 0) {
     >
       <ng-container *ngTemplateOutlet="memberContent"></ng-container>
     </app-wrappable-control>
+    }
     }
   </div>
   }

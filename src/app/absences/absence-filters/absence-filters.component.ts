@@ -66,7 +66,11 @@ export class AbsenceFiltersComponent {
       }
 
       this.submitModal.emit(
-        new AbsenceFilters(new Date(startDate!), new Date(endDate!), memebers)
+        new AbsenceFilters(
+          DateHelper.parseDateOnly(startDate!),
+          DateHelper.parseDateOnly(endDate!),
+          memebers
+        )
       );
     }
   }

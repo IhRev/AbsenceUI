@@ -26,6 +26,10 @@
       <app-form-error [form]="form" [name]="'password'" />
     </div>
 
+    @if (errorMsg()) {
+    <p class="text-denger">{{ errorMsg() }}</p>
+    }
+
     <button class="submit-btn">Submit</button>
   </form>
 </div>

@@ -17,11 +17,12 @@ h1 {
   border: none;
   display: block;
   margin: 0 auto 15px auto;
-  border: 0;
   padding: 10px 20px;
   border-radius: 5px;
   color: rgb(0, 0, 0);
   font-size: 20px;
+  font-family: inherit;
+  cursor: pointer;
   transition: all 0.3s !important;
 }
 

@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
@@ -12,11 +13,13 @@ export class ErrorPageComponent {
   readonly #route = inject(ActivatedRoute);
   readonly #router = inject(Router);
 
-  statusCode = signal<number | null>(null);
+  statusCode = signal(404);
 
   constructor() {
-    this.#route.queryParams.subscribe((params) => {
-      this.statusCode = params['status'] || 404;
+    this.#route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
+      const raw = params.get('status');
+      const parsed = raw ? Number(raw) : NaN;
+      this.statusCode.set(Number.isFinite(parsed) ? parsed : 404);
     });
   }
 

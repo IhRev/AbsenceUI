@@ -13,11 +13,15 @@ import {
   OrganizationDTO,
 } from '../models/organizations.models';
 import { DataResult, Result } from '../../common/models/result.models';
-import { navigateToErrorPage } from '../../common/services/error-utilities';
+import {
+  ApiFailureMessages,
+  toApiFailure,
+} from '../../common/services/error-utilities';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { catchError, map, Observable, of } from 'rxjs';
 import { AuthService } from '../../auth/services/auth.service';
+import { AbsenceTypeService } from '../../absences/services/absence-type.service';
 
 @Injectable({
   providedIn: 'root',
@@ -26,6 +30,7 @@ export class OrganizationsService {
   readonly #authService = inject(AuthService);
   readonly #client = inject(HttpClient);
   readonly #router = inject(Router);
+  readonly #absenceTypes = inject(AbsenceTypeService);
 
   organizations = signal<Organization[] | null>(null);
   selectedOrganization = signal<Organization | null>(null);
@@ -41,14 +46,7 @@ export class OrganizationsService {
           ]);
           return Result.success('New organization added successfully');
         }),
-        catchError((error: HttpErrorResponse) => {
-          console.error(error);
-          if (error.status === 400) {
-            return of(Result.fail(error.error));
-          }
-          navigateToErrorPage(this.#router, error);
-          return of(Result.fail());
-        })
+        catchError((error: HttpErrorResponse) => this.#fail(error, (message) => Result.fail(message)))
       );
   }
 
@@ -61,22 +59,24 @@ export class OrganizationsService {
       )
       .pipe(
         map((res: MemberDTO[]) => DataResult.success<MemberDTO[]>(res)),
-        catchError((error: HttpErrorResponse) => {
-          console.error(error);
-          navigateToErrorPage(this.#router, error);
-          return of(DataResult.fail<MemberDTO[]>());
-        })
+        catchError((error: HttpErrorResponse) =>
+          this.#fail(error, (message) => DataResult.fail<MemberDTO[]>(message), {
+            notFound: 'Organization was not found.',
+          })
+        )
       );
   }
 
   selectOrganization(organization: Organization) {
     this.#saveOrganizationLocally(organization.id);
     this.selectedOrganization.set(organization);
+    this.#absenceTypes.load(organization.id).subscribe();
   }
 
   unselectOrganization() {
     this.#removeOrganizationLocally();
     this.selectedOrganization.set(null);
+    this.#absenceTypes.unload();
   }
 
   edit(organization: EditOrganizationDTO): Observable<Result> {
@@ -96,14 +96,12 @@ export class OrganizationsService {
           this.selectedOrganization.set(edited);
           return Result.success('Organization edited successfully');
         }),
-        catchError((error: HttpErrorResponse) => {
-          console.error(error);
-          if (error.status === 400) {
-            return of(Result.fail(error.error));
-          }
-          navigateToErrorPage(this.#router, error);
-          return of(Result.fail());
-        })
+        catchError((error: HttpErrorResponse) =>
+          this.#fail(error, (message) => Result.fail(message), {
+            forbidden: 'Only the owner can rename this organization.',
+            notFound: 'Organization was not found.',
+          })
+        )
       );
   }
 
@@ -117,13 +115,15 @@ export class OrganizationsService {
           this.organizations.update((prev) => prev!.filter((o) => o.id != id));
           this.selectedOrganization.set(null);
           this.#removeOrganizationLocally();
+          this.#absenceTypes.unload();
           return Result.success('Your organization deleted successfully');
         }),
-        catchError((error: HttpErrorResponse) => {
-          console.error(error);
-          navigateToErrorPage(this.#router, error);
-          return of(Result.fail());
-        })
+        catchError((error: HttpErrorResponse) =>
+          this.#fail(error, (message) => Result.fail(message), {
+            forbidden: 'Wrong password, or you are not the owner.',
+            notFound: 'Organization was not found.',
+          })
+        )
       );
   }
 
@@ -136,11 +136,12 @@ export class OrganizationsService {
         map(() =>
           Result.success('Member deleted successfully from organization')
         ),
-        catchError((error: HttpErrorResponse) => {
-          console.error(error);
-          navigateToErrorPage(this.#router, error);
-          return of(Result.fail());
-        })
+        catchError((error: HttpErrorResponse) =>
+          this.#fail(error, (message) => Result.fail(message), {
+            forbidden: 'Only an admin can remove a member.',
+            notFound: 'Member was not found.',
+          })
+        )
       );
   }
 
@@ -157,11 +158,12 @@ export class OrganizationsService {
       )
       .pipe(
         map(() => Result.success('Member access changed successfully')),
-        catchError((error: HttpErrorResponse) => {
-          console.error(error);
-          navigateToErrorPage(this.#router, error);
-          return of(Result.fail());
-        })
+        catchError((error: HttpErrorResponse) =>
+          this.#fail(error, (message) => Result.fail(message), {
+            forbidden: 'Only an admin can change member access.',
+            notFound: 'Member was not found.',
+          })
+        )
       );
   }
 
@@ -188,17 +190,24 @@ export class OrganizationsService {
             }
           }
         }),
-        catchError((e: HttpErrorResponse) => {
-          console.error(e);
-          navigateToErrorPage(this.#router, e);
-          return of(DataResult.fail<Organization[]>());
-        })
+        catchError((error: HttpErrorResponse) =>
+          this.#fail(error, (message) => DataResult.fail<Organization[]>(message))
+        )
       );
   }
 
   unload() {
     this.selectedOrganization.set(null);
     this.organizations.set(null);
+    this.#absenceTypes.unload();
+  }
+
+  #fail<T>(
+    error: HttpErrorResponse,
+    fail: (message?: string) => T,
+    messages?: ApiFailureMessages
+  ): Observable<T> {
+    return of(toApiFailure(this.#router, error, fail, messages));
   }
 
   #saveOrganizationLocally(organization: number) {

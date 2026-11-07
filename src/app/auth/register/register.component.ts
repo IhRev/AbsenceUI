@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import {
   FormControl,
   FormGroup,
@@ -21,12 +21,13 @@ export class RegisterComponent {
   readonly #authService = inject(AuthService);
   readonly #router = inject(Router);
 
+  errorMsg = signal<string | null>(null);
   form = new FormGroup({
     email: new FormControl('', {
       validators: [Validators.required, Validators.email],
     }),
     password: new FormControl('', {
-      validators: [Validators.required, Validators.minLength(6)],
+      validators: [Validators.required, Validators.minLength(8)],
     }),
     firstName: new FormControl('', { validators: [Validators.required] }),
     lastName: new FormControl('', { validators: [Validators.required] }),
@@ -37,6 +38,7 @@ export class RegisterComponent {
       return;
     }
 
+    this.errorMsg.set(null);
     this.#authService
       .register(
         new RegisterDTO(
@@ -49,6 +51,8 @@ export class RegisterComponent {
         next: (res) => {
           if (res.isSuccess) {
             this.#router.navigate(['/login']);
+          } else {
+            this.errorMsg.set(res.message);
           }
         },
       });

@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { Chart, ChartConfiguration, ChartType } from 'chart.js/auto';
 import { AbsenceDTO } from '../../absences/models/absence.models';
 import { AbsenceService } from '../../absences/services/absence.service';
@@ -9,18 +9,19 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material/input';
 import { HolidaysService } from '../../holidays/services/holidays.service';
 import { DateHelper } from '../../common/helpers/date-helper';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-charts',
   standalone: true,
-  imports: [MatFormFieldModule, MatSelectModule, MatInputModule],
+  imports: [MatFormFieldModule, MatSelectModule, MatInputModule, RouterLink],
   templateUrl: './charts.component.html',
   styleUrl: './charts.component.css',
 })
-export class ChartsComponent implements OnInit {
+export class ChartsComponent implements OnInit, OnDestroy {
   readonly #absenceService = inject(AbsenceService);
   readonly #holidaysService = inject(HolidaysService);
-  readonly #organizationsService = inject(OrganizationsService);
+  readonly organizationService = inject(OrganizationsService);
   #barChartOptions: ChartConfiguration<'bar'>['options'] = {
     responsive: true,
     plugins: {
@@ -58,9 +59,9 @@ export class ChartsComponent implements OnInit {
     this.years.set(years);
     this.selectedYear.set(currentYear);
 
-    const organization = this.#organizationsService.selectedOrganization();
+    const organization = this.organizationService.selectedOrganization();
     if (organization && organization.isAdmin) {
-      this.#organizationsService.getMembers().subscribe((res) => {
+      this.organizationService.getMembers().subscribe((res) => {
         if (res.isSuccess) {
           this.allMembers.set(res.data!);
           this.selectedMembersIds.set(this.allMembers()!.map((m) => m.id));
@@ -72,6 +73,10 @@ export class ChartsComponent implements OnInit {
   }
 
   loadData() {
+    const organization = this.organizationService.selectedOrganization();
+    if (!organization) {
+      return;
+    }
     const start = DateHelper.getStartOfTheYear(this.selectedYear());
     const end = DateHelper.getEndOfTheYear(this.selectedYear());
     this.#absenceService
@@ -81,7 +86,7 @@ export class ChartsComponent implements OnInit {
           if (absencesRes.isSuccess) {
             this.#holidaysService
               .getHolidays(
-                this.#organizationsService.selectedOrganization()!.id,
+                organization.id,
                 start,
                 end
               )
@@ -100,7 +105,17 @@ export class ChartsComponent implements OnInit {
       });
   }
 
+  ngOnDestroy() {
+    if (this.chart instanceof Chart) {
+      this.chart.destroy();
+      this.chart = null;
+    }
+  }
+
   #createChart() {
+    if (this.chart instanceof Chart) {
+      this.chart.destroy();
+    }
     this.chart = new Chart('canvas', {
       type: 'bar',
       data: {
@@ -118,14 +133,26 @@ export class ChartsComponent implements OnInit {
   }
 
   #updateChartData(absences: AbsenceDTO[], holidays: Date[]) {
+    if (!(this.chart instanceof Chart)) {
+      return;
+    }
+    const yearStart = DateHelper.getStartOfTheYear(this.selectedYear());
+    const yearEnd = DateHelper.getEndOfTheYear(this.selectedYear());
+    const holidayDays = new Set(
+      holidays.map((holiday) =>
+        DateHelper.getDateOnlyString(DateHelper.parseDateOnly(holiday))
+      )
+    );
     const counts = Array(12).fill(0);
     for (const absence of absences) {
-      for (
-        let date = new Date(absence.startDate);
-        date <= new Date(absence.endDate);
-        date.setDate(date.getDate() + 1)
-      ) {
-        if (!holidays.includes(date)) {
+      let date = DateHelper.parseDateOnly(absence.startDate);
+      const end = DateHelper.parseDateOnly(absence.endDate);
+      if (date < yearStart) {
+        date = new Date(yearStart);
+      }
+      const last = end > yearEnd ? yearEnd : end;
+      for (; date <= last; date.setDate(date.getDate() + 1)) {
+        if (!holidayDays.has(DateHelper.getDateOnlyString(date))) {
           counts[date.getMonth()]++;
         }
       }

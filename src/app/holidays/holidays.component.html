@@ -1,5 +1,6 @@
+@if (organizationService.selectedOrganization(); as organization) {
 <div class="container">
-  @if (!isProcessing() && organizationService.selectedOrganization()!.isAdmin) {
+  @if (!isProcessing() && organization.isAdmin) {
   <div class="manage-panel">
     <div
       class="msg-box"
@@ -29,24 +30,24 @@
   <div class="grid-list">
     <div
       class="grid-header grid-row"
-      [class.admin-grid]="organizationService.selectedOrganization()!.isAdmin"
+      [class.admin-grid]="organization.isAdmin"
     >
       <span>#</span>
       <span>Name</span>
       <span>Date</span>
-      @if (organizationService.selectedOrganization()!.isAdmin) {
+      @if (organization.isAdmin) {
       <span>Actions</span>
       }
     </div>
     @for (holiday of holidays(); track $index) {
     <div
-      [class.admin-grid]="organizationService.selectedOrganization()!.isAdmin"
+      [class.admin-grid]="organization.isAdmin"
       class="grid-row grid-item-row"
     >
       <span data-label="#">{{ holiday.num }}</span>
       <span data-label="Name">{{ holiday.name }}</span>
       <span data-label="Date">{{ holiday.date | date : "dd.MM.yyyy" }}</span>
-      @if (organizationService.selectedOrganization()!.isAdmin) {
+      @if (organization.isAdmin) {
       <span data-label="Actions">
         <div class="action-buttons">
           <button class="delete-btn" (click)="delete(holiday.id)">
@@ -77,4 +78,9 @@
   (closeModal)="filtersOpened.set(false)"
   (submitModal)="applyFilters($event)"
 />
+} } @else {
+<div class="container">
+  <h2>Select an organization first.</h2>
+  <a routerLink="/organizations">Organizations</a>
+</div>
 }

@@ -25,4 +25,57 @@ export class DateHelper {
     const day = date.getDate().toString().padStart(2, '0');
     return `${year}-${month}-${day}`;
   }
+
+  static startOfLocalDay(date: Date): Date {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  }
+
+  // A date-only string is UTC midnight. Build the same calendar day in local time.
+  static parseDateOnly(value: string | Date): Date {
+    if (typeof value === 'string') {
+      const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+      if (match) {
+        return new Date(
+          Number(match[1]),
+          Number(match[2]) - 1,
+          Number(match[3])
+        );
+      }
+    }
+    return DateHelper.startOfLocalDay(new Date(value));
+  }
+
+  static toOffsetString(date: Date): string {
+    const pad = (value: number) => value.toString().padStart(2, '0');
+    const offsetMinutes = -date.getTimezoneOffset();
+    const sign = offsetMinutes >= 0 ? '+' : '-';
+    const absolute = Math.abs(offsetMinutes);
+    return (
+      `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+      `T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}` +
+      `${sign}${pad(Math.floor(absolute / 60))}:${pad(absolute % 60)}`
+    );
+  }
+
+  // Absence overlap is half-open, so the caller's last day is sent as the next midnight.
+  static absenceQueryRange(startDate: Date, endDate: Date): { start: string; end: string } {
+    const start = DateHelper.startOfLocalDay(startDate);
+    const end = DateHelper.startOfLocalDay(endDate);
+    end.setDate(end.getDate() + 1);
+    return {
+      start: DateHelper.toOffsetString(start),
+      end: DateHelper.toOffsetString(end),
+    };
+  }
+
+  // Holiday overlap is closed, so the end is the last second of the selected day.
+  static holidayQueryRange(startDate: Date, endDate: Date): { start: string; end: string } {
+    const start = DateHelper.startOfLocalDay(startDate);
+    const end = DateHelper.startOfLocalDay(endDate);
+    end.setHours(23, 59, 59, 0);
+    return {
+      start: DateHelper.toOffsetString(start),
+      end: DateHelper.toOffsetString(end),
+    };
+  }
 }

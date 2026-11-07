@@ -10,7 +10,7 @@ import {
 } from '../models/invitations.models';
 import { DataResult, Result } from '../../common/models/result.models';
 import { catchError, map, Observable, of } from 'rxjs';
-import { navigateToErrorPage } from '../../common/services/error-utilities';
+import { toApiFailure } from '../../common/services/error-utilities';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { OrganizationsService } from './organizations.service';
@@ -28,11 +28,15 @@ export class InvitationsService {
       .get<InvitationDTO[]>(`${environment.apiUrl}/invitations`)
       .pipe(
         map((res: InvitationDTO[]) => DataResult.success<InvitationDTO[]>(res)),
-        catchError((error: HttpErrorResponse) => {
-          console.error(error);
-          navigateToErrorPage(this.#router, error);
-          return of(DataResult.fail<InvitationDTO[]>());
-        })
+        catchError((error: HttpErrorResponse) =>
+          of(
+            toApiFailure(
+              this.#router,
+              error,
+              (message) => DataResult.fail<InvitationDTO[]>(message)
+            )
+          )
+        )
       );
   }
 
@@ -43,14 +47,14 @@ export class InvitationsService {
     );
     return this.#client.post(`${environment.apiUrl}/invitations`, dto).pipe(
       map(() => Result.success('User invited successfully')),
-      catchError((error: HttpErrorResponse) => {
-        console.error(error);
-        if (error.status === 400) {
-          return of(Result.fail(error.error));
-        }
-        navigateToErrorPage(this.#router, error);
-        return of(Result.fail());
-      })
+      catchError((error: HttpErrorResponse) =>
+        of(
+          toApiFailure(this.#router, error, (message) => Result.fail(message), {
+            forbidden: 'Only an admin can invite a member.',
+            notFound: 'Organization was not found.',
+          })
+        )
+      )
     );
   }
 
@@ -61,11 +65,14 @@ export class InvitationsService {
       })
       .pipe(
         map(() => Result.success()),
-        catchError((error: HttpErrorResponse) => {
-          console.error(error);
-          navigateToErrorPage(this.#router, error);
-          return of(Result.fail());
-        })
+        catchError((error: HttpErrorResponse) =>
+          of(
+            toApiFailure(this.#router, error, (message) => Result.fail(message), {
+              forbidden: 'This invitation belongs to someone else.',
+              notFound: 'Invitation was not found.',
+            })
+          )
+        )
       );
   }
 }

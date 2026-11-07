@@ -115,19 +115,28 @@ export class OrganizationsComponent implements OnInit {
   }
 
   changeAccess() {
+    const member = this.selectedMember()!;
+    const isAdmin = !member.isAdmin;
     this.isProcessing.set(true);
     this.organizationService
       .changeAccess(
         this.organizationService.selectedOrganization()!.id,
-        this.selectedMember()!.id,
-        true
+        member.id,
+        isAdmin
       )
       .subscribe({
         next: (res) => {
           if (res.isSuccess) {
-            this.selectedMember.update((s) =>
-              s ? { ...s, isAdmin: true } : s
+            const updated = new MemberDTO(
+              member.id,
+              member.fullName,
+              isAdmin,
+              member.isOwner
             );
+            this.members.update((prev) =>
+              prev!.map((item) => (item.id === member.id ? updated : item))
+            );
+            this.selectedMember.set(updated);
           }
           this.isProcessing.set(false);
           this.message.set(res.message);
@@ -182,7 +191,7 @@ export class OrganizationsComponent implements OnInit {
 
   openConfirmation(methodAfterConfirmation: () => void) {
     this.confirmationOpened.set(true);
-    this.#methodAfterConfirmation = methodAfterConfirmation;
+    this.#methodAfterConfirmation = methodAfterConfirmation.bind(this);
   }
 
   confirmationSubmitted() {

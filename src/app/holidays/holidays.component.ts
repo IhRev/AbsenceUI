@@ -12,11 +12,18 @@ import {
 import { OrganizationsService } from '../organizations/services/organizations.service';
 import { HolidayFiltersComponent } from './holiday-filters/holiday-filters.component';
 import { DateHelper } from '../common/helpers/date-helper';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-holidays',
   standalone: true,
-  imports: [DatePipe, HolidayFormComponent, NgClass, HolidayFiltersComponent],
+  imports: [
+    DatePipe,
+    HolidayFormComponent,
+    NgClass,
+    HolidayFiltersComponent,
+    RouterLink,
+  ],
   templateUrl: './holidays.component.html',
   styleUrls: [
     './holidays.component.css',
@@ -37,6 +44,9 @@ export class HolidaysComponent implements OnInit {
   readonly organizationService = inject(OrganizationsService);
 
   ngOnInit() {
+    if (!this.organizationService.selectedOrganization()) {
+      return;
+    }
     this.#loadHolidays(
       DateHelper.getStartOfTheCurrentYear(),
       DateHelper.getEndOfTheCurrentYear()
@@ -113,6 +123,9 @@ export class HolidaysComponent implements OnInit {
 
   applyFilters(filters: HolidayFilters) {
     this.filtersOpened.set(false);
+    if (!this.organizationService.selectedOrganization()) {
+      return;
+    }
     this.#loadHolidays(filters.startDate, filters.endDate);
   }
 

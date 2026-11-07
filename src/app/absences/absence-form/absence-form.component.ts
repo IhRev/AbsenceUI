@@ -66,14 +66,18 @@ export class AbsenceFormComponent {
         this.form.setValue({
           name: absence.name,
           selectedType: absence.type.id,
-          startDate: DateHelper.getDateOnlyString(new Date(absence.startDate)),
-          endDate: DateHelper.getDateOnlyString(new Date(absence.endDate)),
+          startDate: DateHelper.getDateOnlyString(
+            DateHelper.parseDateOnly(absence.startDate)
+          ),
+          endDate: DateHelper.getDateOnlyString(
+            DateHelper.parseDateOnly(absence.endDate)
+          ),
         });
         queueMicrotask(() => this.title.set('Edit'));
       } else {
         this.form.setValue({
           name: 'Absence',
-          selectedType: this.absenceTypeService.types![0].id,
+          selectedType: this.absenceTypeService.types?.[0]?.id ?? 1,
           startDate: DateHelper.getDateOnlyString(new Date()),
           endDate: DateHelper.getDateOnlyString(new Date()),
         });
@@ -83,6 +87,11 @@ export class AbsenceFormComponent {
   }
 
   submit() {
+    this.form.markAllAsTouched();
+    if (this.form.invalid) {
+      return;
+    }
+
     const absence = this.absence();
     if (absence) {
       this.submitEdit.emit(
@@ -90,8 +99,8 @@ export class AbsenceFormComponent {
           absence.id,
           this.form.controls.name.value!,
           this.form.controls.selectedType.value!,
-          new Date(this.form.controls.startDate.value!),
-          new Date(this.form.controls.endDate.value!)
+          DateHelper.parseDateOnly(this.form.controls.startDate.value!),
+          DateHelper.parseDateOnly(this.form.controls.endDate.value!)
         )
       );
     } else {
@@ -99,8 +108,8 @@ export class AbsenceFormComponent {
         new CreateAbsenceDTO(
           this.form.controls.name.value!,
           this.form.controls.selectedType.value!,
-          new Date(this.form.controls.startDate.value!),
-          new Date(this.form.controls.endDate.value!),
+          DateHelper.parseDateOnly(this.form.controls.startDate.value!),
+          DateHelper.parseDateOnly(this.form.controls.endDate.value!),
           this.#organizationsService.selectedOrganization()!.id
         )
       );
