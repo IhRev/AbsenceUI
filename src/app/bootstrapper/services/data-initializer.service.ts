@@ -1,15 +1,13 @@
 import { effect, inject, Injectable, signal } from '@angular/core';
 import { AuthService } from '../../auth/services/auth.service';
-import { AbsenceTypeService } from '../../absences/services/absence-type.service';
 import { OrganizationsService } from '../../organizations/services/organizations.service';
-import { catchError, lastValueFrom, of, switchMap } from 'rxjs';
+import { catchError, lastValueFrom, of } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
 })
 export class DataInitializerService {
   #authService = inject(AuthService);
-  #absenceTypeService = inject(AbsenceTypeService);
   #organizationsService = inject(OrganizationsService);
 
   isLoading = signal(true);
@@ -36,14 +34,6 @@ export class DataInitializerService {
   #loadAll(): Promise<void> {
     return lastValueFrom(
       this.#organizationsService.load().pipe(
-        switchMap(() => {
-          const organization = this.#organizationsService.selectedOrganization();
-          if (!organization) {
-            this.#absenceTypeService.unload();
-            return of(null);
-          }
-          return this.#absenceTypeService.load(organization.id);
-        }),
         catchError((err) => {
           console.error(err);
           return of(null);
@@ -53,7 +43,6 @@ export class DataInitializerService {
   }
 
   #unloadAll() {
-    this.#absenceTypeService.unload();
     this.#organizationsService.unload();
   }
 }

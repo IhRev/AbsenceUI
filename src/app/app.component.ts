@@ -5,6 +5,7 @@ import { FooterComponent } from './footer/footer.component';
 import { filter } from 'rxjs';
 import { BootstrapperComponent } from './bootstrapper/bootstrapper.component';
 import { DataInitializerService } from './bootstrapper/services/data-initializer.service';
+import { OrganizationsService } from './organizations/services/organizations.service';
 
 @Component({
   selector: 'app-root',
@@ -22,6 +23,7 @@ export class AppComponent {
   readonly #router = inject(Router);
 
   initializer = inject(DataInitializerService);
+  readonly organizationService = inject(OrganizationsService);
   isErrorPage = signal(false);
 
   constructor() {

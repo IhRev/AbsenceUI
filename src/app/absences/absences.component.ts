@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import {
   Absence,
   AbsenceDTO,
@@ -18,6 +18,8 @@ import { MemberDTO } from '../organizations/models/organizations.models';
 import { AuthService } from '../auth/services/auth.service';
 import { MemberNameTransformPipe } from '../common/pipes/member-name-transform.pipe';
 import { RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subject, switchMap } from 'rxjs';
 
 @Component({
   selector: 'absence-list',
@@ -36,14 +38,18 @@ import { RouterLink } from '@angular/router';
     '../common/styles/grid-list-styles.css',
   ],
 })
-export class AbsenceListComponent implements OnInit {
+export class AbsenceListComponent {
   #num = 0;
   readonly #absenceService = inject(AbsenceService);
   readonly #absenceTypeService = inject(AbsenceTypeService);
   readonly organizationService = inject(OrganizationsService);
   readonly #authService = inject(AuthService);
+  readonly #absenceQueries = new Subject<{
+    startDate: Date;
+    endDate: Date;
+    userIds: number[] | null;
+  }>();
 
-  members = signal<MemberDTO[]>([]);
   message = signal<string | null>(null);
   isFormOpened = signal(false);
   filtersOpened = signal(false);
@@ -52,43 +58,50 @@ export class AbsenceListComponent implements OnInit {
   absences = signal<Absence[]>([]);
   selectedAbsence = signal<Absence | null>(null);
 
-  ngOnInit() {
-    const organization = this.organizationService.selectedOrganization();
-    if (!organization) {
-      return;
-    }
-    if (organization.isAdmin) {
-      this.isProcessing.set(true);
-      this.organizationService.getMembers().subscribe((res) => {
-        if (res.isSuccess) {
-          this.members.set(res.data!);
-          this.isProcessing.set(false);
+  constructor() {
+    this.#absenceQueries
+      .pipe(
+        switchMap((query) =>
+          query.userIds
+            ? this.#absenceService.getAbsencesBySelectedUsers(
+                query.startDate,
+                query.endDate,
+                query.userIds
+              )
+            : this.#absenceService.getAbsences(query.startDate, query.endDate)
+        ),
+        takeUntilDestroyed()
+      )
+      .subscribe((result) => {
+        if (result.isSuccess) {
+          this.#setAbsences(result.data!);
+        } else {
+          this.#showLoadFailure(result.message);
+        }
+        this.isProcessing.set(false);
+      });
+
+    effect(
+      () => {
+        const organization = this.organizationService.selectedOrganization();
+        const members = this.organizationService.members();
+        if (!organization || !members) {
+          return;
+        }
+        const start = DateHelper.getStartOfTheCurrentYear();
+        const end = DateHelper.getEndOfTheCurrentYear();
+        if (organization.isAdmin) {
           this.#loadAbsencesBySelectedUsers(
-            DateHelper.getStartOfTheCurrentYear(),
-            DateHelper.getEndOfTheCurrentYear(),
-            res.data!.map((member) => member.id)
+            start,
+            end,
+            members.map((member) => member.id)
           );
         } else {
-          this.isProcessing.set(false);
-          this.isSuccess.set(false);
-          this.message.set(res.message);
+          this.#loadAbsences(start, end);
         }
-      });
-    } else {
-      this.members.set([
-        new MemberDTO(
-          this.#authService.userDetails()!.id,
-          this.#authService.userDetails()!.firstName +
-            this.#authService.userDetails()!.lastName,
-          organization.isAdmin,
-          organization.isOwner
-        ),
-      ]);
-      this.#loadAbsences(
-        DateHelper.getStartOfTheCurrentYear(),
-        DateHelper.getEndOfTheCurrentYear()
-      );
-    }
+      },
+      { allowSignalWrites: true }
+    );
   }
 
   create(absence: CreateAbsenceDTO) {
@@ -99,7 +112,7 @@ export class AbsenceListComponent implements OnInit {
       next: (result) => {
         if (result.isSuccess && result.data) {
           const type = this.#typeById(absence.type);
-          const member = this.members().find(
+          const member = this.#members().find(
             (m) => m.id === this.#authService.userDetails()!.id
           );
           if (type && member) {
@@ -182,7 +195,7 @@ export class AbsenceListComponent implements OnInit {
       const userIds =
         selected.length > 0
           ? selected
-          : this.members().map((member) => member.id);
+          : this.#members().map((member) => member.id);
       this.#loadAbsencesBySelectedUsers(
         filters.startDate,
         filters.endDate,
@@ -204,32 +217,12 @@ export class AbsenceListComponent implements OnInit {
     usersIds: number[]
   ) {
     this.isProcessing.set(true);
-    this.#absenceService
-      .getAbsencesBySelectedUsers(startDate, endDate, usersIds)
-      .subscribe({
-        next: (result) => {
-          if (result.isSuccess) {
-            this.#setAbsences(result.data!);
-          } else {
-            this.#showLoadFailure(result.message);
-          }
-          this.isProcessing.set(false);
-        },
-      });
+    this.#absenceQueries.next({ startDate, endDate, userIds: usersIds });
   }
 
   #loadAbsences(startDate: Date, endDate: Date) {
     this.isProcessing.set(true);
-    this.#absenceService.getAbsences(startDate, endDate).subscribe({
-      next: (result) => {
-        if (result.isSuccess) {
-          this.#setAbsences(result.data!);
-        } else {
-          this.#showLoadFailure(result.message);
-        }
-        this.isProcessing.set(false);
-      },
-    });
+    this.#absenceQueries.next({ startDate, endDate, userIds: null });
   }
 
   #setAbsences(absences: AbsenceDTO[]) {
@@ -244,7 +237,7 @@ export class AbsenceListComponent implements OnInit {
     let skipped = 0;
     for (const absence of absences) {
       const type = types.find((item) => item.id === absence.type);
-      const member = this.members().find((item) => item.id === absence.userId);
+      const member = this.#members().find((item) => item.id === absence.userId);
       if (!type || !member) {
         skipped++;
         continue;
@@ -270,6 +263,10 @@ export class AbsenceListComponent implements OnInit {
           : `${skipped} absences could not be shown.`
       );
     }
+  }
+
+  #members(): MemberDTO[] {
+    return this.organizationService.members() ?? [];
   }
 
   #typeById(typeId: number) {

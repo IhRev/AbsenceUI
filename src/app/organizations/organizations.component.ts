@@ -37,7 +37,6 @@ export class OrganizationsComponent implements OnInit {
   readonly #breakingObserver = inject(BreakpointObserver);
 
   readonly organizationService = inject(OrganizationsService);
-  members = signal<MemberDTO[] | null>(null);
   selectedMember = signal<MemberDTO | null>(null);
   organization = signal<Organization | null>(null);
   message = signal<string | null>(null);
@@ -49,14 +48,23 @@ export class OrganizationsComponent implements OnInit {
   isSuccess = signal(false);
   isMobile = signal(false);
 
+  #shownOrganizationId: number | null = null;
+
   constructor() {
     effect(
       () => {
-        if (this.organizationService.selectedOrganization()) {
-          this.#loadMembers();
-        } else {
+        const organization = this.organizationService.selectedOrganization();
+        const members = this.organizationService.members();
+        if (!organization || !members) {
           this.selectedMember.set(null);
-          this.members.set(null);
+          this.#shownOrganizationId = null;
+          return;
+        }
+        if (this.#shownOrganizationId !== organization.id) {
+          this.#shownOrganizationId = organization.id;
+          this.selectedMember.set(
+            members.find((member) => member.isOwner) ?? null
+          );
         }
       },
       { allowSignalWrites: true }
@@ -133,7 +141,7 @@ export class OrganizationsComponent implements OnInit {
               isAdmin,
               member.isOwner
             );
-            this.members.update((prev) =>
+            this.organizationService.members.update((prev) =>
               prev!.map((item) => (item.id === member.id ? updated : item))
             );
             this.selectedMember.set(updated);
@@ -154,7 +162,9 @@ export class OrganizationsComponent implements OnInit {
         next: (res) => {
           if (res.isSuccess) {
             this.selectedMember.set(null);
-            this.members.update((prev) => prev!.filter((m) => m.id != id));
+            this.organizationService.members.update((prev) =>
+              prev!.filter((m) => m.id != id)
+            );
           }
           this.isProcessing.set(false);
           this.message.set(res.message);
@@ -200,18 +210,4 @@ export class OrganizationsComponent implements OnInit {
   }
 
   #methodAfterConfirmation!: () => void;
-
-  #loadMembers() {
-    this.isProcessing.set(true);
-    this.organizationService.getMembers().subscribe({
-      next: (res) => {
-        if (res.isSuccess) {
-          this.selectedMember.set(null);
-          this.members.set(res.data!);
-          this.selectedMember.set(res.data!.find((m) => m.isOwner)!);
-        }
-        this.isProcessing.set(false);
-      },
-    });
-  }
 }

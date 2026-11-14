@@ -1,5 +1,9 @@
-@if (initializer.isLoading()!) {
-<app-bootstrapper />
+@if (initializer.isLoading() || organizationService.organizationDataLoading()) {
+<app-bootstrapper
+  [message]="
+    initializer.isLoading() ? 'Loading Data' : 'Switching organization…'
+  "
+/>
 }@else {
 <div class="page-container">
   @if (!isErrorPage()) {

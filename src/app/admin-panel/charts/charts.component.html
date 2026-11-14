@@ -16,7 +16,7 @@
           (valueChange)="selectedMembersIds.set($event)"
           (closed)="loadData()"
         >
-          @for (member of allMembers(); track $index) {
+          @for (member of organizationService.members() ?? []; track $index) {
           <mat-option class="option" [value]="member.id">
             {{ member.fullName }}
           </mat-option>

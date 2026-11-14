@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { AbsenceTypeDTO } from '../models/absence.models';
 import { environment } from '../../../environments/environment';
-import { catchError, Observable, of, tap } from 'rxjs';
+import { catchError, Observable, of } from 'rxjs';
 import { Router } from '@angular/router';
 import { navigateToErrorPage } from '../../common/services/error-utilities';
 
@@ -15,16 +15,14 @@ export class AbsenceTypeService {
 
   types: AbsenceTypeDTO[] | null = null;
 
-  load(organizationId: number): Observable<AbsenceTypeDTO[]> {
+  load(organizationId: number): Observable<AbsenceTypeDTO[] | null> {
     return this.#client
       .get<AbsenceTypeDTO[]>(
         `${environment.apiUrl}/organizations/${organizationId}/absences/types`
       )
       .pipe(
-        tap((res) => (this.types = res)),
         catchError((error: HttpErrorResponse) => {
           console.error(error);
-          this.types = null;
           if (
             error.status !== 400 &&
             error.status !== 401 &&
@@ -33,12 +31,12 @@ export class AbsenceTypeService {
           ) {
             navigateToErrorPage(this.#router, error);
           }
-          return of([]);
+          return of(null);
         })
       );
   }
 
-  unload() {
-    this.types = null;
+  replace(types: AbsenceTypeDTO[] | null) {
+    this.types = types;
   }
 }

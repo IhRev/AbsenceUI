@@ -1,0 +1,60 @@
+.show {
+  opacity: 1 !important;
+}
+
+.not-logged-in-container h1.show,
+.not-logged-in-container h2.show,
+.not-logged-in-container h3.show,
+.btns button.show {
+  transform: none !important;
+}
+
+.not-logged-in-container h2.show,
+.not-logged-in-container h3.show,
+.btns button.show {
+  transition-delay: 400ms;
+}
+
+.hidden {
+  opacity: 0;
+  transition: transform 1s ease-in-out, opacity 1s ease-in-out;
+}
+
+.not-logged-in-container h1.hidden,
+.not-logged-in-container h2.hidden,
+.not-logged-in-container h3.hidden {
+  transform: translateY(-20px);
+}
+
+.btns button.hidden {
+  transform: translateX(-100px);
+}
+
+.points ul.hidden {
+  opacity: 1 !important;
+  transition: all 0.3s ease !important;
+}
+
+.points li {
+  opacity: 0;
+}
+
+.points .hidden li {
+  transform: translateX(-100px);
+  opacity: 0 !important;
+  transition: transform 1s ease-in-out, opacity 1s ease-in-out;
+}
+
+.points .show li {
+  transform: translateX(0);
+  opacity: 1 !important;
+  transition-delay: calc(0.4s + 0.2s * var(--i));
+}
+
+.img-wrapper img {
+  opacity: 0;
+}
+
+.img-wrapper img.show {
+  transition-delay: 1s;
+}

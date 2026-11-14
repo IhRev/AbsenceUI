@@ -84,7 +84,7 @@
     <app-absence-filters
       (closeModal)="filtersOpened.set(false)"
       (submitModal)="applyFilters($event)"
-      [members]="members()"
+      [members]="organizationService.members() ?? []"
     />
   }
 }

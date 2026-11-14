@@ -13,6 +13,8 @@ import { OrganizationsService } from '../organizations/services/organizations.se
 import { HolidayFiltersComponent } from './holiday-filters/holiday-filters.component';
 import { DateHelper } from '../common/helpers/date-helper';
 import { RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { of, Subject, switchMap } from 'rxjs';
 
 @Component({
   selector: 'app-holidays',
@@ -42,6 +44,38 @@ export class HolidaysComponent implements OnInit {
   holidays = signal<Holiday[]>([]);
   selectedHoliday = signal<Holiday | null>(null);
   readonly organizationService = inject(OrganizationsService);
+  readonly #holidayQueries = new Subject<{ startDate: Date; endDate: Date }>();
+
+  constructor() {
+    this.#holidayQueries
+      .pipe(
+        switchMap((query) => {
+          const organization = this.organizationService.selectedOrganization();
+          if (!organization) {
+            return of(null);
+          }
+          return this.#holidaysService.getHolidays(
+            organization.id,
+            query.startDate,
+            query.endDate
+          );
+        }),
+        takeUntilDestroyed()
+      )
+      .subscribe((res) => {
+        if (!res) {
+          this.isProcessing.set(false);
+          return;
+        }
+        if (res.isSuccess) {
+          this.#setHolidays(res.data!);
+        } else {
+          this.isSuccess.set(false);
+          this.message.set(res.message);
+        }
+        this.isProcessing.set(false);
+      });
+  }
 
   ngOnInit() {
     if (!this.organizationService.selectedOrganization()) {
@@ -141,23 +175,7 @@ export class HolidaysComponent implements OnInit {
 
   #loadHolidays(startDate: Date, endDate: Date): void {
     this.#startProcess();
-    this.#holidaysService
-      .getHolidays(
-        this.organizationService.selectedOrganization()!.id,
-        startDate,
-        endDate
-      )
-      .subscribe({
-        next: (res) => {
-          if (res.isSuccess) {
-            this.#setHolidays(res.data!);
-          } else {
-            this.isSuccess.set(false);
-            this.message.set(res.message);
-          }
-          this.isProcessing.set(false);
-        },
-      });
+    this.#holidayQueries.next({ startDate, endDate });
   }
 
   #setHolidays(holidays: HolidayDTO[]) {
