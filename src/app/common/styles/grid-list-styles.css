@@ -11,45 +11,8 @@
 }
 
 .msg-box {
-  display: flex;
   flex: 1 1 auto;
-  border-radius: 5px;
-  height: 36px;
-  font-size: 20px;
-  padding: 0 5px;
   margin-right: 20px;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.msg-box.success-msg {
-  background-color: rgba(43, 184, 43, 0.438);
-}
-
-.msg-box.error-msg {
-  background-color: rgba(184, 43, 43, 0.438);
-}
-
-.msg-box .msg {
-  font-size: 20px;
-  line-height: 20px;
-}
-
-.msg-box .close-btn {
-  background-color: transparent;
-  border: none;
-  color: white;
-  font-size: 20px;
-  width: 24px;
-  height: 24px;
-  padding-top: 1px;
-  padding-right: 1px;
-}
-
-.msg-box .close-btn:hover {
-  border-radius: 50px;
-  background-color: rgba(0, 0, 0, 0.153);
-  transition: all 0.2s;
 }
 
 .btns {
@@ -65,24 +28,11 @@ button {
 .btns button {
   width: 36px;
   height: 36px;
-  cursor: pointer;
   border-radius: 5px;
   padding-top: 2px;
   font-size: 20px;
   color: #fff;
   border: none;
-}
-
-.add-btn {
-  background-color: rgb(50, 169, 48);
-}
-
-.add-btn:hover {
-  background-color: rgb(34, 150, 32);
-}
-
-.add-btn:active {
-  background-color: rgb(28, 118, 26);
 }
 
 .grid-list {
@@ -161,14 +111,6 @@ button {
 
 .edit-btn:active {
   background: rgb(124, 124, 26);
-}
-
-.load-icon {
-  display: block;
-  text-align: center;
-  margin: 50px auto 0 auto;
-  font-size: 30px;
-  width: 100px;
 }
 
 @media screen and (max-width: 768px) {

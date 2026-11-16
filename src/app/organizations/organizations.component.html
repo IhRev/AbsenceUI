@@ -73,7 +73,7 @@ organizationService.organizations()!.length === 0) {
     </app-wrappable-control>
 
     @if (organizationService.selectedOrganization(); as organization) {
-    @if(members()){
+    @if(organizationService.members()){
     <hr class="wide-screen" />
 
     <!-- Organization details content -->
@@ -104,7 +104,7 @@ organizationService.organizations()!.length === 0) {
           <h2 class="label">Members</h2>
         </div>
         <ul class="list-box">
-          @for (member of members(); track $index) {
+          @for (member of organizationService.members(); track $index) {
           <li
             class="item"
             (click)="selectMember(member)"

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, input } from '@angular/core';
 
 @Component({
   selector: 'app-bootstrapper',
@@ -7,4 +7,6 @@ import { Component } from '@angular/core';
   templateUrl: './bootstrapper.component.html',
   styleUrl: './bootstrapper.component.css',
 })
-export class BootstrapperComponent {}
+export class BootstrapperComponent {
+  message = input('Loading Data');
+}

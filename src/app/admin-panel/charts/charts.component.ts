@@ -1,15 +1,36 @@
-import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
-import { Chart, ChartConfiguration, ChartType } from 'chart.js/auto';
+import { Component, effect, inject, AfterViewInit, OnDestroy, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { map, of, Subject, switchMap } from 'rxjs';
+import {
+  BarController,
+  BarElement,
+  CategoryScale,
+  Chart,
+  ChartConfiguration,
+  Legend,
+  LinearScale,
+  Title,
+  Tooltip,
+} from 'chart.js';
 import { AbsenceDTO } from '../../absences/models/absence.models';
 import { AbsenceService } from '../../absences/services/absence.service';
 import { OrganizationsService } from '../../organizations/services/organizations.service';
-import { MemberDTO } from '../../organizations/models/organizations.models';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material/input';
 import { HolidaysService } from '../../holidays/services/holidays.service';
 import { DateHelper } from '../../common/helpers/date-helper';
 import { RouterLink } from '@angular/router';
+
+Chart.register(
+  BarController,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  Title,
+  Tooltip,
+  Legend
+);
 
 @Component({
   selector: 'app-charts',
@@ -18,7 +39,7 @@ import { RouterLink } from '@angular/router';
   templateUrl: './charts.component.html',
   styleUrl: './charts.component.css',
 })
-export class ChartsComponent implements OnInit, OnDestroy {
+export class ChartsComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly #absenceService = inject(AbsenceService);
   readonly #holidaysService = inject(HolidaysService);
   readonly organizationService = inject(OrganizationsService);
@@ -45,10 +66,38 @@ export class ChartsComponent implements OnInit, OnDestroy {
   ];
 
   chart: any = [];
-  allMembers = signal<MemberDTO[] | null>(null);
   selectedMembersIds = signal<number[]>([]);
   years = signal<number[]>([]);
   selectedYear = signal(0);
+  readonly #chartRequests = new Subject<void>();
+  #chartReady = false;
+
+  constructor() {
+    this.#chartRequests
+      .pipe(
+        switchMap(() => this.#chartData()),
+        takeUntilDestroyed()
+      )
+      .subscribe((result) => {
+        if (!result || !(this.chart instanceof Chart)) {
+          return;
+        }
+        this.#updateChartData(result.absences, result.holidays);
+      });
+
+    effect(
+      () => {
+        const organization = this.organizationService.selectedOrganization();
+        const members = this.organizationService.members();
+        if (!organization?.isAdmin || !members || !this.#chartReady) {
+          return;
+        }
+        this.selectedMembersIds.set(members.map((member) => member.id));
+        this.loadData();
+      },
+      { allowSignalWrites: true }
+    );
+  }
 
   ngOnInit() {
     var currentYear = DateHelper.getCurrentYear();
@@ -58,51 +107,23 @@ export class ChartsComponent implements OnInit, OnDestroy {
     }
     this.years.set(years);
     this.selectedYear.set(currentYear);
+  }
 
-    const organization = this.organizationService.selectedOrganization();
-    if (organization && organization.isAdmin) {
-      this.organizationService.getMembers().subscribe((res) => {
-        if (res.isSuccess) {
-          this.allMembers.set(res.data!);
-          this.selectedMembersIds.set(this.allMembers()!.map((m) => m.id));
-          this.#createChart();
-          this.loadData();
-        }
-      });
+  ngAfterViewInit() {
+    this.#createChart();
+    this.#chartReady = true;
+    const members = this.organizationService.members();
+    if (members) {
+      this.selectedMembersIds.set(members.map((member) => member.id));
     }
+    this.loadData();
   }
 
   loadData() {
-    const organization = this.organizationService.selectedOrganization();
-    if (!organization) {
+    if (!this.organizationService.selectedOrganization()) {
       return;
     }
-    const start = DateHelper.getStartOfTheYear(this.selectedYear());
-    const end = DateHelper.getEndOfTheYear(this.selectedYear());
-    this.#absenceService
-      .getAbsencesBySelectedUsers(start, end, this.selectedMembersIds())
-      .subscribe({
-        next: (absencesRes) => {
-          if (absencesRes.isSuccess) {
-            this.#holidaysService
-              .getHolidays(
-                organization.id,
-                start,
-                end
-              )
-              .subscribe({
-                next: (holidaysRes) => {
-                  if (holidaysRes.isSuccess) {
-                    this.#updateChartData(
-                      absencesRes.data!,
-                      holidaysRes.data!.map((h) => h.date)
-                    );
-                  }
-                },
-              });
-          }
-        },
-      });
+    this.#chartRequests.next();
   }
 
   ngOnDestroy() {
@@ -110,6 +131,35 @@ export class ChartsComponent implements OnInit, OnDestroy {
       this.chart.destroy();
       this.chart = null;
     }
+  }
+
+  #chartData() {
+    const organization = this.organizationService.selectedOrganization();
+    if (!organization) {
+      return of(null);
+    }
+    const start = DateHelper.getStartOfTheYear(this.selectedYear());
+    const end = DateHelper.getEndOfTheYear(this.selectedYear());
+    return this.#absenceService
+      .getAbsencesBySelectedUsers(start, end, this.selectedMembersIds())
+      .pipe(
+        switchMap((absencesRes) => {
+          if (!absencesRes.isSuccess || !absencesRes.data) {
+            return of(null);
+          }
+          return this.#holidaysService.getHolidays(organization.id, start, end).pipe(
+            map((holidaysRes) => {
+              if (!holidaysRes.isSuccess || !holidaysRes.data) {
+                return null;
+              }
+              return {
+                absences: absencesRes.data!,
+                holidays: holidaysRes.data.map((holiday) => holiday.date),
+              };
+            })
+          );
+        })
+      );
   }
 
   #createChart() {

@@ -8,7 +8,11 @@ import { OrganizationsService } from '../organizations/services/organizations.se
   standalone: true,
   imports: [RouterLink],
   templateUrl: './home.component.html',
-  styleUrl: './home.component.css',
+  styleUrls: [
+    './home.component.css',
+    './home.motion.css',
+    './home.responsive.css',
+  ],
 })
 export class HomeComponent implements AfterViewInit {
   readonly authService = inject(AuthService);

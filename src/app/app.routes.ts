@@ -1,37 +1,72 @@
 import { Routes } from '@angular/router';
-import { LoginComponent } from './auth/login/login.component';
-import { AbsenceListComponent } from './absences/absences.component';
 import { HomeComponent } from './home/home.component';
-import { UserProfileComponent } from './auth/user-profile/user-profile.component';
-import { AboutComponent } from './about/about.component';
-import { RegisterComponent } from './auth/register/register.component';
-import { HolidaysComponent } from './holidays/holidays.component';
-import { AdminPanelComponent } from './admin-panel/admin-panel.component';
-import { EventsComponent } from './admin-panel/events/events.component';
-import { ErrorPageComponent } from './common/error-page/error-page.component';
-import { ChartsComponent } from './admin-panel/charts/charts.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/home', pathMatch: 'full' },
-  { path: 'login', component: LoginComponent },
-  { path: 'error', component: ErrorPageComponent },
-  { path: 'absences', component: AbsenceListComponent },
+  {
+    path: 'login',
+    loadComponent: () =>
+      import('./auth/login/login.component').then((m) => m.LoginComponent),
+  },
+  {
+    path: 'error',
+    loadComponent: () =>
+      import('./common/error-page/error-page.component').then(
+        (m) => m.ErrorPageComponent
+      ),
+  },
+  {
+    path: 'absences',
+    loadComponent: () =>
+      import('./absences/absences.component').then(
+        (m) => m.AbsenceListComponent
+      ),
+  },
   { path: 'home', component: HomeComponent },
-  { path: 'about', component: AboutComponent },
-  { path: 'profile', component: UserProfileComponent },
-  { path: 'register', component: RegisterComponent },
-  { path: 'holidays', component: HolidaysComponent },
+  {
+    path: 'about',
+    loadComponent: () =>
+      import('./about/about.component').then((m) => m.AboutComponent),
+  },
+  {
+    path: 'profile',
+    loadComponent: () =>
+      import('./auth/user-profile/user-profile.component').then(
+        (m) => m.UserProfileComponent
+      ),
+  },
+  {
+    path: 'register',
+    loadComponent: () =>
+      import('./auth/register/register.component').then(
+        (m) => m.RegisterComponent
+      ),
+  },
+  {
+    path: 'holidays',
+    loadComponent: () =>
+      import('./holidays/holidays.component').then((m) => m.HolidaysComponent),
+  },
   {
     path: 'admin',
-    component: AdminPanelComponent,
+    loadComponent: () =>
+      import('./admin-panel/admin-panel.component').then(
+        (m) => m.AdminPanelComponent
+      ),
     children: [
       {
         path: 'events',
-        component: EventsComponent,
+        loadComponent: () =>
+          import('./admin-panel/events/events.component').then(
+            (m) => m.EventsComponent
+          ),
       },
       {
         path: 'charts',
-        component: ChartsComponent,
+        loadComponent: () =>
+          import('./admin-panel/charts/charts.component').then(
+            (m) => m.ChartsComponent
+          ),
       },
     ],
   },

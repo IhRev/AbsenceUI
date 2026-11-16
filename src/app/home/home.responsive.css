@@ -1,0 +1,50 @@
+@media screen and (max-width: 768px) {
+  .logged-in-container h2 {
+    margin-top: 30%;
+  }
+
+  .logged-in-container .label {
+    font-size: 30px;
+  }
+
+  .not-logged-in-container {
+    margin-top: 20px;
+  }
+
+  .not-logged-in-container h1 {
+    font-size: 38px;
+  }
+
+  .not-logged-in-container h2,
+  .not-logged-in-container h3 {
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+
+  .btns {
+    margin-bottom: 50px;
+  }
+
+  .btns button {
+    padding: 10px 20px;
+    font-size: 20px;
+    box-shadow: 6px 6px 6px black;
+  }
+
+  .points {
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .points li {
+    font-size: 20px;
+    margin-bottom: 10px;
+    text-align: center;
+    padding: 0;
+  }
+
+  .first-point {
+    margin-top: 0;
+  }
+}
